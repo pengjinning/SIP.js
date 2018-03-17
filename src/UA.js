@@ -223,6 +223,15 @@ UA.prototype.afterConnected = function afterConnected (callback) {
 };
 
 /**
+ * Returns a promise which resolves once the UA is connected.
+ */
+UA.prototype.waitForConnected = function() {
+  return new SIP.Utils.Promise(function(resolve) {
+    this.afterConnected(resolve);
+  }.bind(this));
+};
+
+/**
  * Make an outgoing call.
  *
  * @param {String} target
@@ -235,8 +244,13 @@ UA.prototype.afterConnected = function afterConnected (callback) {
 UA.prototype.invite = function(target, options, modifiers) {
   var context = new SIP.InviteClientContext(this, target, options, modifiers);
 
-  this.afterConnected(context.invite.bind(context));
-  this.emit('inviteSent', context);
+  // Delay sending actual invite until the next 'tick' if we are already
+  // connected, so that API consumers can register to events fired by the
+  // the session.
+  this.waitForConnected().then(function() {
+    context.invite();
+    this.emit('inviteSent', context);
+  }.bind(this));
   return context;
 };
 
@@ -699,6 +713,22 @@ UA.prototype.receiveRequest = function(request) {
           request.reply(481, 'Subscription does not exist');
         }
         break;
+      case SIP.C.REFER:
+        this.logger.log('Received an out of dialog refer');
+        if (this.configuration.allowOutOfDialogRefers) {
+          this.logger.log('Allow out of dialog refers is enabled on the UA');
+          var referContext = new SIP.ReferServerContext(this, request);
+          var hasReferListener = this.listeners('outOfDialogReferRequested').length;
+          if (hasReferListener) {
+            this.emit('outOfDialogReferRequested', referContext);
+          } else {
+            this.logger.log('No outOfDialogReferRequest listeners, automatically accepting and following the out of dialog refer');
+            referContext.accept({followRefer: true});
+          }
+          break;
+        }
+        request.reply(405);
+        break;
       default:
         request.reply(405);
         break;
@@ -932,8 +962,7 @@ UA.prototype.loadConfig = function(configuration) {
       // Session Description Handler Options
       sessionDescriptionHandlerFactoryOptions: {
         constraints: {},
-        iceCheckingTimeout: 5000,
-        rtcConfiguration: {},
+        peerConnectionOptions: {}
       },
 
       contactName: SIP.Utils.createRandomToken(8), // user name in user part
@@ -947,6 +976,11 @@ UA.prototype.loadConfig = function(configuration) {
       //Reliable Provisional Responses
       rel100: SIP.C.supported.UNSUPPORTED,
 
+      // DTMF type: 'info' or 'rtp' (RFC 4733)
+      // RTP Payload Spec: https://tools.ietf.org/html/rfc4733
+      // WebRTC Audio Spec: https://tools.ietf.org/html/rfc7874
+      dtmfType: SIP.C.dtmfType.INFO,
+
       // Replaces header (RFC 3891)
       // http://tools.ietf.org/html/rfc3891
       replaces: SIP.C.supported.UNSUPPORTED,
@@ -958,6 +992,8 @@ UA.prototype.loadConfig = function(configuration) {
       }),
 
       allowLegacyNotifications: false,
+
+      allowOutOfDialogRefers: false,
     };
 
   // Pre-Configuration
@@ -1262,6 +1298,17 @@ UA.prototype.getConfigurationCheck = function () {
         }
       },
 
+      dtmfType: function(dtmfType) {
+        switch (dtmfType) {
+          case SIP.C.dtmfType.RTP:
+            return SIP.C.dtmfType.RTP;
+          case SIP.C.dtmfType.INFO:
+            // Fall through
+          default:
+            return SIP.C.dtmfType.INFO;
+        }
+      },
+
       hackViaTcp: function(hackViaTcp) {
         if (typeof hackViaTcp === 'boolean') {
           return hackViaTcp;
@@ -1418,12 +1465,6 @@ UA.prototype.getConfigurationCheck = function () {
       traceSip: function(traceSip) {
         if (typeof traceSip === 'boolean') {
           return traceSip;
-        }
-      },
-
-      rtcpMuxPolicy: function(rtcpMuxPolicy) {
-        if (typeof rtcpMuxPolicy === 'string') {
-          return rtcpMuxPolicy;
         }
       },
 

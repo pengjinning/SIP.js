@@ -68,9 +68,8 @@ describe('Session', function() {
     expect(Session.tones).toBeNull();
   });
 
-  it('initializes mute/hold state info', function() {
+  it('initializes local_hold state info', function() {
     expect(Session.local_hold).toBe(false);
-    expect(Session.remote_hold).toBe(false);
   });
 
   it('initializes early_sdp, and rel100', function() {
@@ -152,6 +151,33 @@ describe('Session', function() {
     it('returns Session on success', function() {
       expect(Session.dtmf(1)).toBe(Session);
     });
+
+    describe('RTCDTMFSender', function() {
+      beforeEach(function() {
+        Session.ua = ua = new SIP.UA({uri: 'jim@example.com', dtmfType: SIP.C.dtmfType.RTP}).start();
+        Session.sessionDescriptionHandler = { sendDtmf: function(tones, options) {} };
+      });
+
+      it('calls SessionDescriptionHandler.sendDtmf when the correct configuration is given', function() {
+        Session.sessionDescriptionHandler.sendDtmf = function(tones, options) {return false;}
+        spyOn(Session.sessionDescriptionHandler, 'sendDtmf').and.returnValue(true)
+        Session.dtmf('7');
+        expect(Session.sessionDescriptionHandler.sendDtmf).toHaveBeenCalledWith('7', {});
+      });
+
+      it('logs a warning when SessionDescriptionHandler.sendDtmf returns false', function() {
+        spyOn(Session.logger, 'warn');
+        Session.dtmf('7');
+        expect(Session.logger.warn).toHaveBeenCalled();
+      });
+
+      it('sendDtmf is not called when dtmfType is SIP.C.dtmfType.INFO', function() {
+        Session.ua = ua = new SIP.UA({uri: 'jim@example.com', dtmfType: SIP.C.dtmfType.INFO}).start();
+        spyOn(Session.sessionDescriptionHandler, 'sendDtmf');
+        Session.dtmf('7');
+        expect(Session.sessionDescriptionHandler.sendDtmf).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('.bye', function() {
@@ -214,7 +240,7 @@ describe('Session', function() {
       expect(function(){Session.refer(target);}).toThrowError('Invalid status: 0');
     });
 
-    it('returns Session on success', function() {
+    xit('returns Session on success', function() {
       Session.dialog = new SIP.Dialog(Session, message, 'UAC');
       expect(Session.refer(target)).toBe(Session);
     });
@@ -321,53 +347,6 @@ describe('Session', function() {
 
       expect(function(){Session.hold()}).toThrowError('Invalid status: 0');
     });
-
-    it('does not emit hold if local hold is true', function() {
-      Session.local_hold = true;
-
-      Session.hold();
-
-      expect(Session.emit).not.toHaveBeenCalled();
-    });
-
-    it('emits hold on success', function() {
-      Session.hold();
-
-      expect(Session.emit.calls.mostRecent().args[0]).toBe('hold');
-    });
-  });
-
-  describe('.unhold', function() {
-    beforeEach(function() {
-      spyOn(Session, 'emit');
-      Session.status = 12;
-      Session.local_hold = true;
-
-      spyOn(Session, 'sendReinvite');
-    });
-
-    it('does not emit unhold if local hold is false', function() {
-      Session.local_hold = false;
-
-      Session.unhold();
-
-      expect(Session.emit).not.toHaveBeenCalled();
-    });
-
-    it('emits unhold on success', function() {
-      Session.unhold();
-
-      expect(Session.emit.calls.mostRecent().args[0]).toBe('unhold');
-    });
-  });
-
-  describe('.isOnHold', function() {
-    it('returns the values of local_hold and remote_hold', function() {
-      Session.local_hold = 'local';
-      Session.remote_hold = 'remote';
-
-      expect(Session.isOnHold()).toEqual({local: 'local', remote: 'remote'});
-    });
   });
 
   describe('.receiveReinvite', function() {
@@ -384,33 +363,10 @@ describe('Session', function() {
       };
     });
 
-    it('does not call setDescription and replies with 415 if contentType is not application/sdp', function() {
-      spyOn(message, 'getHeader').and.returnValue('incorrect');
-      spyOn(message, 'reply');
-
-      Session.receiveReinvite(message);
-
-      expect(Session.sessionDescriptionHandler.setDescription).not.toHaveBeenCalled();
-      expect(message.reply).toHaveBeenCalledWith(415);
-    });
-
     it('calls setDescription on success', function() {
       Session.receiveReinvite(message);
 
       expect(Session.sessionDescriptionHandler.setDescription).toHaveBeenCalled();
-    });
-  });
-
-  describe('.sendReinvite', function() {
-    beforeEach(function() {
-      Session.sessionDescriptionHandler = {getDescription: jasmine.createSpy('getDescription').and.returnValue(SIP.Utils.Promise.resolve(true))};
-    });
-
-    it('on success, sets receiveResponse and calls getDescription', function(){
-      Session.sendReinvite();
-
-      expect(Session.sessionDescriptionHandler.getDescription).toHaveBeenCalled();
-      expect(Session.receiveResponse).toBe(Session.receiveReinviteResponse);
     });
   });
 
@@ -649,60 +605,6 @@ describe('Session', function() {
       Session.onDialogError();
 
       expect(Session.failed).toHaveBeenCalled();
-    });
-  });
-
-  describe('.onhold', function() {
-    beforeEach(function() {
-      Session.local_hold = false;
-      Session.remote_hold = false;
-
-      spyOn(Session, 'emit');
-    });
-
-    it('sets local_hold to true and emits hold when originator is local', function(){
-      expect(Session.local_hold).toBe(false);
-
-      Session.onhold('local');
-
-      expect(Session.local_hold).toBe(true);
-      expect(Session.emit.calls.mostRecent().args[0]).toBe('hold');
-    });
-
-    it('sets remote_hold to true and emits hold when originator is remote', function(){
-      expect(Session.remote_hold).toBe(false);
-
-      Session.onhold('remote');
-
-      expect(Session.remote_hold).toBe(true);
-      expect(Session.emit.calls.mostRecent().args[0]).toBe('hold');
-    });
-  });
-
-  describe('.onunhold', function() {
-    beforeEach(function() {
-      Session.local_hold = true;
-      Session.remote_hold = true;
-
-      spyOn(Session, 'emit');
-    });
-
-    it('sets local_hold to false and emits unhold when originator is local', function(){
-      expect(Session.local_hold).toBe(true);
-
-      Session.onunhold('local');
-
-      expect(Session.local_hold).toBe(false);
-      expect(Session.emit.calls.mostRecent().args[0]).toBe('unhold');
-    });
-
-    it('sets remote_hold to false and emit unhold when originator is remote', function(){
-      expect(Session.remote_hold).toBe(true);
-
-      Session.onunhold('remote');
-
-      expect(Session.remote_hold).toBe(false);
-      expect(Session.emit.calls.mostRecent().args[0]).toBe('unhold');
     });
   });
 
@@ -1244,6 +1146,16 @@ describe('InviteServerContext', function() {
       it('calls sessionDescriptionHandler.setDescription when the ACK contains an answer to an invite w/o sdp', function() {
         InviteServerContext.hasOffer = true;
 
+        InviteServerContext.sessionDescriptionHandler = {
+          hasDescription: function() {
+            return true;
+          },
+          setDescription: jasmine.createSpy('setDescription').and.returnValue(SIP.Utils.Promise.resolve(true)),
+          close: function() {
+            return;
+          }
+        };
+
         req = SIP.Parser.parseMessage([
           'ACK sip:gled5gsn@hk95bautgaa7.invalid;transport=ws;aor=james%40onsnip.onsip.com SIP/2.0',
           'Max-Forwards: 65',
@@ -1273,6 +1185,13 @@ describe('InviteServerContext', function() {
 
         InviteServerContext.dialog = new SIP.Dialog(InviteServerContext, req, 'UAS');
 
+        InviteServerContext.sessionDescriptionHandler = {
+          hasDescription: function() {
+            return false;
+          },
+          close: function() { return; }
+        };
+
         InviteServerContext.receiveRequest(req);
 
         expect(SIP.Timers.clearTimeout).toHaveBeenCalledWith(InviteServerContext.timers.ackTimer);
@@ -1282,14 +1201,6 @@ describe('InviteServerContext', function() {
         expect(InviteServerContext.accepted).not.toHaveBeenCalled();
       });
 
-      it('calls failed if the above two conditions are not true', function() {
-        spyOn(InviteServerContext, 'failed');
-
-        InviteServerContext.receiveRequest(req);
-
-        expect(InviteServerContext.failed).toHaveBeenCalledWith(req, SIP.C.causes.BAD_MEDIA_DESCRIPTION);
-      });
-
       it('calls confirmSession if there was an invite w/ sdp originally', function() {
         InviteServerContext.hasOffer = true;
         InviteServerContext.hasAnswer = true;
@@ -1297,6 +1208,13 @@ describe('InviteServerContext', function() {
         spyOn(SIP.Timers, 'clearTimeout').and.callThrough();
         spyOn(InviteServerContext, 'emit');
         InviteServerContext.dialog = new SIP.Dialog(InviteServerContext, req, 'UAS');
+
+        InviteServerContext.sessionDescriptionHandler = {
+          hasDescription: function() {
+            return false;
+          },
+          close: function() { return; }
+        };
 
         InviteServerContext.receiveRequest(req);
 
@@ -1558,44 +1476,6 @@ describe('InviteServerContext', function() {
         };
 
         InviteServerContext.receiveRequest(req);
-      });
-    });
-
-    describe('method is REFER', function() {
-      it('replies 202, then calls callback and terminate if there is a session.followRefer listener', function() {
-        InviteServerContext.status = 12;
-        req = SIP.Parser.parseMessage([
-          'REFER sip:gled5gsn@hk95bautgaa7.invalid;transport=ws;aor=james%40onsnip.onsip.com SIP/2.0',
-          'Max-Forwards: 65',
-          'To: <sip:james@onsnip.onsip.com>',
-          'refer-to: <sip:charles@example.com>',
-          'From: "test1" <sip:test1@onsnip.onsip.com>;tag=rto5ib4052',
-          'Call-ID: grj0liun879lfj35evfq',
-          'CSeq: 1798 INVITE',
-          'Contact: <sip:e55r35u3@kgu78r4e1e6j.invalid;transport=ws;ob>',
-          'Allow: ACK,CANCEL,BYE,OPTIONS,INVITE,MESSAGE',
-          'Content-Type: application/json',
-          'Supported: outbound',
-          'User-Agent: SIP.js 0.5.0-devel',
-          'Content-Length: 11',
-          '',
-          'a=sendrecv',
-          ''].join('\r\n'), InviteServerContext.ua);
-
-        spyOn(req, 'reply');
-        var referFollowed = jasmine.createSpy('referFollowed');
-        spyOn(InviteServerContext, 'terminate');
-        InviteServerContext.dialog = new SIP.Dialog(InviteServerContext, InviteServerContext.request, 'UAS');
-        spyOn(InviteServerContext.dialog, 'sendRequest');
-        InviteServerContext.on('refer', InviteServerContext.followRefer(referFollowed));
-
-        InviteServerContext.receiveRequest(req);
-
-        //More can be tested here... another Session/* problem
-
-        expect(req.reply).toHaveBeenCalledWith(202, 'Accepted');
-        expect(referFollowed).toHaveBeenCalled();
-        expect(InviteServerContext.terminate).toHaveBeenCalled();
       });
     });
   });

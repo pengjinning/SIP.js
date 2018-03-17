@@ -164,6 +164,11 @@ Transport.prototype = {
       this.logger.warn('error connecting to WebSocket ' + this.server.ws_uri + ': ' + e);
     }
 
+    if (!this.ws) {
+      transport.onError('Websocket could not be instantiated.');
+      return;
+    }
+
     this.ws.binaryType = 'arraybuffer';
 
     this.ws.onopen = function() {
@@ -280,7 +285,7 @@ Transport.prototype = {
     // WebSocket binary message.
     else if (typeof data !== 'string') {
       try {
-        data = String.fromCharCode.apply(null, Buffer.alloc(data));
+        data = String.fromCharCode.apply(null, new Uint8Array(data));
       } catch(evt) {
         this.logger.warn('received WebSocket binary message failed to be converted into string, message discarded');
         return;

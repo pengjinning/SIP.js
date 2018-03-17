@@ -53,8 +53,7 @@ var Simple = function (options) {
   if (!this.audio && !this.video) {
     // Need to do at least audio or video
     // Error
-    this.logger.error('At least one remote audio or video element is required for Simple.');
-    return;
+    throw new Error('At least one remote audio or video element is required for Simple.');
   }
 
   this.options = options;
@@ -70,14 +69,23 @@ var Simple = function (options) {
     sessionDescriptionHandlerFactoryOptions.modifiers = [SIP.WebRTC.Modifiers.stripG722];
   }
 
+  if (!this.options.ua.uri) {
+    this.anonymous = true;
+  }
+
   this.ua = new SIP.UA({
+    // User Configurable Options
     wsServers:         this.options.ua.wsServers,
     uri:               this.options.ua.uri,
     authorizationUser: this.options.ua.authorizationUser,
     password:          this.options.ua.password,
-    sessionDescriptionHandlerFactoryOptions: sessionDescriptionHandlerFactoryOptions,
+    displayName:       this.options.ua.displayName,
+    // Undocumented "Advanced" Options
+    traceSip:          this.options.ua.traceSip,
+    userAgentString:   this.options.ua.userAgentString,
+    // Fixed Options
     register:          true,
-    traceSip:          true
+    sessionDescriptionHandlerFactoryOptions: sessionDescriptionHandlerFactoryOptions,
   });
 
   this.state = C.STATUS_NULL;
@@ -105,17 +113,23 @@ var Simple = function (options) {
     }
     this.session = session;
     this.setupSession();
+    this.emit('ringing', this.session);
+  }.bind(this));
+
+  this.ua.on('message', function(message) {
+    this.emit('message', message);
   }.bind(this));
 
   return this;
 };
 
 Simple.prototype = Object.create(SIP.EventEmitter.prototype);
+Simple.C = C;
 
 // Public
 
 Simple.prototype.call = function(destination) {
-  if (!this.ua && !this.ua.registered) {
+  if (!this.ua || !this.checkRegistration()) {
     this.logger.warn('A registered UA is required for calling');
     return;
   }
@@ -191,7 +205,7 @@ Simple.prototype.hangup = function() {
 };
 
 Simple.prototype.hold = function() {
-  if (this.state !== C.STATUS_CONNECTED || this.session.isOnHold().local) {
+  if (this.state !== C.STATUS_CONNECTED || this.session.local_hold) {
     this.logger.warn('Cannot put call on hold');
     return;
   }
@@ -201,7 +215,7 @@ Simple.prototype.hold = function() {
 };
 
 Simple.prototype.unhold = function() {
-  if (this.state !== C.STATUS_CONNECTED || !this.session.isOnHold().local) {
+  if (this.state !== C.STATUS_CONNECTED || !this.session.local_hold) {
     this.logger.warn('Cannot unhold a call that is not on hold');
     return;
   }
@@ -217,6 +231,7 @@ Simple.prototype.mute = function() {
   }
   this.logger.log('Muting Audio');
   this.toggleMute(true);
+  this.emit('mute', this);
 };
 
 Simple.prototype.unmute = function() {
@@ -226,6 +241,7 @@ Simple.prototype.unmute = function() {
   }
   this.logger.log('Unmuting Audio');
   this.toggleMute(false);
+  this.emit('unmute', this);
 };
 
 Simple.prototype.sendDTMF = function(tone) {
@@ -237,16 +253,30 @@ Simple.prototype.sendDTMF = function(tone) {
   this.session.dtmf(tone);
 };
 
+Simple.prototype.message = function(destination, message) {
+  if (!this.ua || !this.checkRegistration()) {
+    this.logger.warn('A registered UA is required to send a message');
+    return;
+  }
+  if (!destination || !message) {
+    this.logger.warn('A destination and message are required to send a message');
+    return;
+  }
+  this.ua.message(destination, message);
+};
+
 // Private Helpers
+
+Simple.prototype.checkRegistration = function() {
+  return (this.anonymous || (this.ua && this.ua.isRegistered()));
+};
 
 Simple.prototype.setupRemoteMedia = function() {
   // If there is a video track, it will attach the video and audio to the same element
   var pc = this.session.sessionDescriptionHandler.peerConnection;
   var remoteStream;
 
-  if (pc.getRemoteStreams) {
-    remoteStream = pc.getRemoteStreams()[0];
-  } else {
+  if (pc.getReceivers) {
     remoteStream = new global.window.MediaStream();
     pc.getReceivers().forEach(function(receiver) {
       var track = receiver.track;
@@ -254,6 +284,8 @@ Simple.prototype.setupRemoteMedia = function() {
         remoteStream.addTrack(track);
       }
     });
+  } else {
+    remoteStream = pc.getRemoteStreams()[0];
   }
   if (this.video) {
     this.options.media.remote.video.srcObject = remoteStream;
@@ -269,7 +301,7 @@ Simple.prototype.setupRemoteMedia = function() {
 };
 
 Simple.prototype.setupLocalMedia = function() {
-  if (this.video && this.options.media.local.video) {
+  if (this.video && this.options.media.local && this.options.media.local.video) {
     var pc = this.session.sessionDescriptionHandler.peerConnection;
     var localStream;
     if (pc.getSenders) {
@@ -293,7 +325,7 @@ Simple.prototype.cleanupMedia = function() {
   if (this.video) {
     this.options.media.remote.video.srcObject = null;
     this.options.media.remote.video.pause();
-    if (this.options.media.local.video) {
+    if (this.options.media.local && this.options.media.local.video) {
       this.options.media.local.video.srcObject = null;
       this.options.media.local.video.pause();
     }
