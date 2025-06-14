@@ -1,81 +1,147 @@
-# SIP.js
+![SIP.js Logo](https://sipjs.com/shared/img/logo.png "SIP.js")
 
-[![Build Status](https://travis-ci.org/onsip/SIP.js.png?branch=master)](https://travis-ci.org/onsip/SIP.js)
+[![Build Status](https://travis-ci.com/onsip/SIP.js.svg?branch=master)](https://travis-ci.com/onsip/SIP.js)
+[![npm version](https://badge.fury.io/js/sip.js.svg)](https://badge.fury.io/js/sip.js)
 
-A JavaScript SIP stack for WebRTC, instant messaging, and more!
+# SIP Library for JavaScript
 
+- Create real-time peer-to-peer audio and video sessions via [WebRTC](https://webrtc.org/)
+- Utilize SIP in your web application via [SIP over WebSocket](https://tools.ietf.org/html/rfc7118) 
+- Send instant messages and view presence
+- Support early media, hold and transfers
+- Send DTMF RFC 2833 or SIP INFO
+- Share your screen or desktop
+- Written in TypeScript
+- Runs in all major web browsers
+- Compatible with standards compliant servers including [Asterisk](https://www.asterisk.org/) and [FreeSWITCH](https://freeswitch.com/)
 
-## Website and Documentation
+## Demo
 
-* [SIPjs.com](https://sipjs.com)
-* [Mailing List](https://groups.google.com/forum/#!forum/sip_js)
-* [Issue Tracking](https://github.com/onsip/sip.js/issues)
+Want see it in action? The project website, [sipjs.com](https://sipjs.com), has a [live demo](https://sipjs.com).
 
+Looking for code to get started with? This repository includes [demonstrations](./demo/README.md) which run in a web browser.
 
-## Download
+## Usage
 
-* [sipjs.com/download](https://sipjs.com/download/)
-* Bower: `bower install sip.js`
-* npm: `npm install sip.js`
+To place a SIP call, either utilize the [`SimpleUser` class](docs/simple-user.md)...
 
-## Authors
+```ts
+import { Web } from "sip.js";
 
-### James Criscuolo
+// Helper function to get an HTML audio element
+function getAudioElement(id: string): HTMLAudioElement {
+  const el = document.getElementById(id);
+  if (!(el instanceof HTMLAudioElement)) {
+    throw new Error(`Element "${id}" not found or not an audio element.`);
+  }
+  return el;
+}
 
-* <james@onsip.com>
-* GitHub [@james-criscuolo](https://github.com/james-criscuolo)
+// Options for SimpleUser
+const options: Web.SimpleUserOptions = {
+  aor: "sip:alice@example.com", // caller
+  media: {
+    constraints: { audio: true, video: false }, // audio only call
+    remote: { audio: getAudioElement("remoteAudio") } // play remote audio
+  }
+};
 
-### Eric Green
+// WebSocket server to connect with
+const server = "wss://sip.example.com";
 
-* <eric.green@onsip.com>
-* GitHub [@egreenmachine](https://github.com/egreenmachine)
+// Construct a SimpleUser instance
+const simpleUser = new Web.SimpleUser(server, options);
 
-### Joseph Frazier
+// Connect to server and place call
+simpleUser.connect()
+  .then(() => simpleUser.call("sip:bob@example.com"))
+  .catch((error: Error) => {
+    // Call failed
+  });
+```
 
-* <1212jtraceur@gmail.com>
-* GitHub [@josephfrazier](https://github.com/josephfrazier)
-* Twitter [@josephfrazier_](https://twitter.com/josephfrazier_)
+Or, alternatively, use the full [API framework](docs/api.md)...
 
-### Will Mitchell
+```ts
+import { Inviter, SessionState, UserAgent } from "sip.js";
 
-* <wakamoleguy@gmail.com>
-* GitHub [@wakamoleguy](http://github.com/wakamoleguy)
-* Twitter [@wakamoleguy](http://twitter.com/wakamoleguy)
+// Create user agent instance (caller)
+const userAgent = new UserAgent({
+  uri: UserAgent.makeURI("sip:alice@example.com"),
+  transportOptions: {
+    server: "wss://sip.example.com"
+  },
+});
 
-### JsSIP Authors
+// Connect the user agent
+userAgent.start().then(() => {
 
-SIP.js contains substantial portions of the JsSIP software. JsSIP's authors at time of fork are listed below. For up to date information about JsSIP, please visit [jssip.net](http://jssip.net)
+  // Set target destination (callee)
+  const target = UserAgent.makeURI("sip:bob@example.com");
+  if (!target) {
+    throw new Error("Failed to create target URI.");
+  }
 
-* José Luis Millán
-* Iñaki Baz Castillo
-* Saúl Ibarra Corretgé
+  // Create a user agent client to establish a session
+  const inviter = new Inviter(userAgent, target, {
+    sessionDescriptionHandlerOptions: {
+      constraints: { audio: true, video: false }
+    }
+  });
 
-## License
+  // Handle outgoing session state changes
+  inviter.stateChange.addListener((newState) => {
+    switch (newState) {
+      case SessionState.Establishing:
+        // Session is establishing
+        break;
+      case SessionState.Established:
+        // Session has been established
+        break;
+      case SessionState.Terminated:
+        // Session has terminated
+        break;
+      default:
+        break;
+    }
+  });
 
-SIP.js is released under the [MIT license](https://sipjs.com/license).
+  // Send initial INVITE request
+  inviter.invite()
+    .then(() => {
+      // INVITE sent
+    })
+    .catch((error: Error) => {
+      // INVITE did not send
+    });
 
-SIP.js contains substantial portions of the JsSIP software, under the following license:
+});
+```
+## Installation
 
-~~~
-Copyright (c) 2012-2013 José Luis Millán - Versatica <http://www.versatica.com>
+Node module
+```sh
+npm install sip.js
+```
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+ UMD bundle
+- Download [sipjs.com/download](https://sipjs.com/download)
+- CDN [jsDelivr.com](https://www.jsdelivr.com/package/npm/sip.js)
 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
+## Building, Development and Testing
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Clone this repository, then...
 
-~~~
+```sh
+npm install
+npm run build-and-test
+```
+
+For more info please see the [Documentation](./docs/README.md).
+
+## Support
+
+* For migration guides and API reference please see the [Documentation](./docs/README.md).
+* For bug reports and feature requests please open a [GitHub Issue](https://github.com/onsip/sip.js/issues).
+* For questions or usage problems please use the [Google Group](https://groups.google.com/forum/#!forum/sip_js).
+* For more information see the project website at [SIPjs.com](https://sipjs.com).

@@ -1,6 +1,13 @@
-node_modules/
-dist/sip*
-.grunt
 _SpecRunner.html
-src/Grammar/dist/Grammar.js
 npm-debug.log
+node_modules/
+dist/
+lib/
+src/Grammar/dist/*
+src/**/*.js
+temp/
+test/spec/*.spec.js
+test/spec/api/*.js
+test/spec/core/*.js
+test/spec/platform/web/*.js
+test/support/**/*.js
