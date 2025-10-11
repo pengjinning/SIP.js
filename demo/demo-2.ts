@@ -292,6 +292,7 @@ function makeServerDisconnectCallback(
     registerButton.disabled = true;
     beginButton.disabled = true;
     if (error) {
+      console.error("makeServerDisconnectCallback:", error);
       alert(`[${user.id}] Server disconnected.\n` + error.message);
     }
   };
@@ -358,6 +359,7 @@ function makeRegisterButtonClickListener(user: SimpleUser, registerButton: HTMLB
             console.warn(`[${user.id}] REGISTER rejected`);
             let message = `Registration of "${user.id}" rejected.\n`;
             message += `Reason: ${response.message.reasonPhrase}\n`;
+            console.warn("makeRegisterButtonClickListener:", message);
             alert(message);
           }
         }
@@ -402,6 +404,7 @@ function makeBeginButtonClickListener(user: SimpleUser, target: string, targetDi
             message += `Reason: ${response.message.reasonPhrase}\n`;
             message += `Perhaps "${targetDisplay}" is not connected or registered?\n`;
             message += `Or perhaps "${targetDisplay}" did not grant access to video?\n`;
+            console.warn("makeBeginButtonClickListener:", message);
             alert(message);
           }
         },

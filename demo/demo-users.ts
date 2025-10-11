@@ -29,7 +29,7 @@ if (token === "") {
 
 // The demos uses unauthenticated users on the "sip.weiyuai.cn" demo domain.
 // The demos uses OnSIP's WebSocket Server which hosts the "sip.weiyuai.cn" demo domain.
-const domain = "sip.weiyuai.cn";
+// const domain = "sip.weiyuai.cn";
 
 export const nameAlice = "Alice";
 // export const uriAlice = "sip:alice." + token + "@" + domain;
