@@ -1,22 +1,11 @@
-audio {
-  margin: 8px;
-}
+audio { margin: 8px 0; }
 
-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
+button { width: 120px; margin: 6px 6px 6px 0; }
 
-button {
-  width: 100px;
-  margin: 8px;
-}
+input { margin: 6px 6px 6px 0; }
 
-input {
-  margin: 8px;
-}
+.dtmf { margin: 8px 0; }
 
-.dtmf {
-  margin: 8px;
-}
+.keypad { width: 40px; }
+
+.panel { margin-top: 10px; }
