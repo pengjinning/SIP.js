@@ -16,11 +16,11 @@ const holdCheckbox = getInput("hold");
 const muteCheckbox = getInput("mute");
 
 // WebSocket Server URL
-const webSocketServer = "wss://edge.sip.onsip.com";
+const webSocketServer = "wss://sip.weiyuai.cn/ws";
 serverSpan.innerHTML = webSocketServer;
 
 // Destination URI
-const target = "sip:echo@sipjs.onsip.com";
+const target = "sip:echo@sip.weiyuai.cn";
 targetSpan.innerHTML = target;
 
 // Name for demo user

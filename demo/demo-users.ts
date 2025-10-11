@@ -27,14 +27,14 @@ if (token === "") {
   document.cookie = "onsipToken=" + token + ";" + "expires=" + d.toUTCString() + ";";
 }
 
-// The demos uses unauthenticated users on the "sipjs.onsip.com" demo domain.
-// The demos uses OnSIP's WebSocket Server which hosts the "sipjs.onsip.com" demo domain.
-const domain = "sipjs.onsip.com";
+// The demos uses unauthenticated users on the "sip.weiyuai.cn" demo domain.
+// The demos uses OnSIP's WebSocket Server which hosts the "sip.weiyuai.cn" demo domain.
+const domain = "sip.weiyuai.cn";
 
 export const nameAlice = "Alice";
 export const uriAlice = "sip:alice." + token + "@" + domain;
-export const webSocketServerAlice = "wss://edge.sip.onsip.com";
+export const webSocketServerAlice = "wss://sip.weiyuai.cn/ws";
 
 export const nameBob = "Bob";
 export const uriBob = "sip:bob." + token + "@" + domain;
-export const webSocketServerBob = "wss://edge.sip.onsip.com";
+export const webSocketServerBob = "wss://sip.weiyuai.cn/ws";
