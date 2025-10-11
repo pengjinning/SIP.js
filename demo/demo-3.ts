@@ -189,7 +189,7 @@ function buildUser(
       }
     },
     userAgentOptions: {
-      // logLevel: "debug",
+      logLevel: "debug",
       displayName,
       authorizationUsername: authUser,
       authorizationPassword: AUTH_PASSWORD

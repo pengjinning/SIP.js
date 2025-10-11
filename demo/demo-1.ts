@@ -77,7 +77,7 @@ const simpleUserOptions: SimpleUserOptions = {
     }
   },
   userAgentOptions: {
-    // logLevel: "debug",
+    logLevel: "debug",
     displayName,
     authorizationUsername: AUTH_USER,
     authorizationPassword: AUTH_PASS
