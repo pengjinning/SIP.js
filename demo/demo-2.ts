@@ -26,6 +26,7 @@ const videoLocalAlice = getVideo("videoLocalAlice");
 const videoLocalBob = getVideo("videoLocalBob");
 const videoRemoteAlice = getVideo("videoRemoteAlice");
 const videoRemoteBob = getVideo("videoRemoteBob");
+const AUTH_PASSWORD = "bytedesk123";
 
 // New SimpleUser for Alice
 const alice = buildUser(
@@ -87,6 +88,7 @@ function buildUser(
   videoRemoteElement: HTMLVideoElement
 ): SimpleUser {
   console.log(`Creating "${name}" <${aor}>...`);
+  const authUser = aor.match(/^sip:([^@]+)/)?.[1] || "";
 
   // SimpleUser options
   const options: SimpleUserOptions = {
@@ -106,7 +108,9 @@ function buildUser(
     },
     userAgentOptions: {
       // logLevel: "debug",
-      displayName
+      displayName,
+      authorizationUsername: authUser,
+      authorizationPassword: AUTH_PASSWORD
     }
   };
 

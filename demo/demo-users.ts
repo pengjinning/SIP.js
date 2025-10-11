@@ -32,9 +32,11 @@ if (token === "") {
 const domain = "sip.weiyuai.cn";
 
 export const nameAlice = "Alice";
-export const uriAlice = "sip:alice." + token + "@" + domain;
+// export const uriAlice = "sip:alice." + token + "@" + domain;
+export const uriAlice = "sip:alice@sip.weiyuai.cn";
 export const webSocketServerAlice = "wss://sip.weiyuai.cn/ws";
 
 export const nameBob = "Bob";
-export const uriBob = "sip:bob." + token + "@" + domain;
+// export const uriBob = "sip:bob." + token + "@" + domain;
+export const uriBob = "sip:bob@sip.weiyuai.cn";
 export const webSocketServerBob = "wss://sip.weiyuai.cn/ws";

@@ -19,12 +19,17 @@ const muteCheckbox = getInput("mute");
 const webSocketServer = "wss://sip.weiyuai.cn/ws";
 serverSpan.innerHTML = webSocketServer;
 
+// Demo user AOR and credentials
+const aor = "sip:alice@sip.weiyuai.cn";
+const AUTH_USER = "alice";
+const AUTH_PASS = "bytedesk123";
+
 // Destination URI
 const target = "sip:echo@sip.weiyuai.cn";
 targetSpan.innerHTML = target;
 
 // Name for demo user
-const displayName = "SIP.js Demo";
+const displayName = "Alice";
 
 // SimpleUser delegate
 const simpleUserDelegate: SimpleUserDelegate = {
@@ -53,12 +58,19 @@ const simpleUserDelegate: SimpleUserDelegate = {
   onCallHold: (held: boolean): void => {
     console.log(`[${displayName}] Call hold ${held}`);
     holdCheckbox.checked = held;
+  },
+  onRegistered: (): void => {
+    console.log(`[${displayName}] Registered as ${aor}`);
+  },
+  onUnregistered: (): void => {
+    console.log(`[${displayName}] Unregistered`);
   }
 };
 
 // SimpleUser options
 const simpleUserOptions: SimpleUserOptions = {
   delegate: simpleUserDelegate,
+  aor,
   media: {
     remote: {
       audio: audioElement
@@ -66,7 +78,9 @@ const simpleUserOptions: SimpleUserOptions = {
   },
   userAgentOptions: {
     // logLevel: "debug",
-    displayName
+    displayName,
+    authorizationUsername: AUTH_USER,
+    authorizationPassword: AUTH_PASS
   }
 };
 
@@ -81,6 +95,7 @@ connectButton.addEventListener("click", () => {
   hangupButton.disabled = true;
   simpleUser
     .connect()
+    .then(() => simpleUser.register()) // connect 后自动注册
     .then(() => {
       connectButton.disabled = true;
       disconnectButton.disabled = false;
@@ -89,9 +104,9 @@ connectButton.addEventListener("click", () => {
     })
     .catch((error: Error) => {
       connectButton.disabled = false;
-      console.error(`[${simpleUser.id}] failed to connect`);
+      console.error(`[${simpleUser.id}] failed to connect/register`);
       console.error(error);
-      alert("Failed to connect.\n" + error);
+      alert("Failed to connect/register.\n" + error);
     });
 });
 
@@ -127,8 +142,9 @@ disconnectButton.addEventListener("click", () => {
   disconnectButton.disabled = true;
   callButton.disabled = true;
   hangupButton.disabled = true;
-  simpleUser
-    .disconnect()
+  Promise.resolve()
+    .then(() => simpleUser.unregister().catch(() => undefined)) // 先注销，忽略失败
+    .then(() => simpleUser.disconnect())
     .then(() => {
       connectButton.disabled = false;
       disconnectButton.disabled = true;
@@ -163,7 +179,6 @@ const keypadDisabled = (disabled: boolean): void => {
 // Add change listener to hold checkbox
 holdCheckbox.addEventListener("change", () => {
   if (holdCheckbox.checked) {
-    // Checkbox is checked..
     simpleUser.hold().catch((error: Error) => {
       holdCheckbox.checked = false;
       console.error(`[${simpleUser.id}] failed to hold call`);
@@ -171,7 +186,6 @@ holdCheckbox.addEventListener("change", () => {
       alert("Failed to hold call.\n" + error);
     });
   } else {
-    // Checkbox is not checked..
     simpleUser.unhold().catch((error: Error) => {
       holdCheckbox.checked = true;
       console.error(`[${simpleUser.id}] failed to unhold call`);
@@ -190,7 +204,6 @@ const holdCheckboxDisabled = (disabled: boolean): void => {
 // Add change listener to mute checkbox
 muteCheckbox.addEventListener("change", () => {
   if (muteCheckbox.checked) {
-    // Checkbox is checked..
     simpleUser.mute();
     if (simpleUser.isMuted() === false) {
       muteCheckbox.checked = false;
@@ -198,7 +211,6 @@ muteCheckbox.addEventListener("change", () => {
       alert("Failed to mute call.\n");
     }
   } else {
-    // Checkbox is not checked..
     simpleUser.unmute();
     if (simpleUser.isMuted() === true) {
       muteCheckbox.checked = true;

@@ -117,6 +117,7 @@ const receiveAlice = getDiv("receiveAlice");
 const messageBob = getInput("messageBob");
 const sendBob = getButton("sendBob");
 const receiveBob = getDiv("receiveBob");
+const AUTH_PASSWORD = "bytedesk123";
 
 // New SimpleUserWithDataChannel for Alice
 const alice = buildUser(
@@ -175,6 +176,7 @@ function buildUser(
   receiveDiv: HTMLDivElement
 ): SimpleUser {
   console.log(`Creating "${name}" <${aor}>...`);
+  const authUser = aor.match(/^sip:([^@]+)/)?.[1] || "";
 
   // SimpleUser options
   const options: SimpleUserOptions = {
@@ -188,7 +190,9 @@ function buildUser(
     },
     userAgentOptions: {
       // logLevel: "debug",
-      displayName
+      displayName,
+      authorizationUsername: authUser,
+      authorizationPassword: AUTH_PASSWORD
     }
   };
 
