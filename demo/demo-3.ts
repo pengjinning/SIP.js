@@ -184,7 +184,7 @@ function buildUser(
     media: {
       constraints: {
         // This demo is making "data only" calls
-        audio: false,
+        audio: true, // 如果设置为 false，则 freeswitch 会报错，无法联通
         video: false
       }
     },
