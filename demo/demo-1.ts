@@ -7,6 +7,7 @@ const serverSpan = getSpan("server");
 const targetSpan = getSpan("target");
 const connectButton = getButton("connect");
 const callButton = getButton("call");
+const call2000Button = getButton("call2000");
 const hangupButton = getButton("hangup");
 const disconnectButton = getButton("disconnect");
 const audioElement = getAudio("remoteAudio");
@@ -36,6 +37,7 @@ const simpleUserDelegate: SimpleUserDelegate = {
   onCallCreated: (): void => {
     console.log(`[${displayName}] Call created`);
     callButton.disabled = true;
+    call2000Button.disabled = true;
     hangupButton.disabled = false;
     keypadDisabled(true);
     holdCheckboxDisabled(true);
@@ -50,6 +52,7 @@ const simpleUserDelegate: SimpleUserDelegate = {
   onCallHangup: (): void => {
     console.log(`[${displayName}] Call hangup`);
     callButton.disabled = false;
+    call2000Button.disabled = false;
     hangupButton.disabled = true;
     keypadDisabled(true);
     holdCheckboxDisabled(true);
@@ -92,6 +95,7 @@ connectButton.addEventListener("click", () => {
   connectButton.disabled = true;
   disconnectButton.disabled = true;
   callButton.disabled = true;
+  call2000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser
     .connect()
@@ -100,6 +104,7 @@ connectButton.addEventListener("click", () => {
       connectButton.disabled = true;
       disconnectButton.disabled = false;
       callButton.disabled = false;
+      call2000Button.disabled = false;
       hangupButton.disabled = true;
     })
     .catch((error: Error) => {
@@ -113,6 +118,7 @@ connectButton.addEventListener("click", () => {
 // Add click listener to call button
 callButton.addEventListener("click", () => {
   callButton.disabled = true;
+  call2000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser
     .call(target, {
@@ -125,9 +131,26 @@ callButton.addEventListener("click", () => {
     });
 });
 
+// Add click listener to call 2000 button
+call2000Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call2000Button.disabled = true;
+  hangupButton.disabled = true;
+  simpleUser
+    .call("sip:2000@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      console.error(`[${simpleUser.id}] failed to place call to 2000`);
+      console.error(error);
+      alert("Failed to place call to 2000.\n" + error);
+    });
+});
+
 // Add click listener to hangup button
 hangupButton.addEventListener("click", () => {
   callButton.disabled = true;
+  call2000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser.hangup().catch((error: Error) => {
     console.error(`[${simpleUser.id}] failed to hangup call`);
@@ -141,14 +164,16 @@ disconnectButton.addEventListener("click", () => {
   connectButton.disabled = true;
   disconnectButton.disabled = true;
   callButton.disabled = true;
+  call2000Button.disabled = true;
   hangupButton.disabled = true;
   Promise.resolve()
-    .then(() => simpleUser.unregister().catch(() => undefined)) // 先注销，忽略失败
+    .then(() => simpleUser.unregister().catch(() => undefined)) // 先注销,忽略失败
     .then(() => simpleUser.disconnect())
     .then(() => {
       connectButton.disabled = false;
       disconnectButton.disabled = true;
       callButton.disabled = true;
+      call2000Button.disabled = true;
       hangupButton.disabled = true;
     })
     .catch((error: Error) => {
