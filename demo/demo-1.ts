@@ -8,6 +8,7 @@ const targetSpan = getSpan("target");
 const connectButton = getButton("connect");
 const callButton = getButton("call");
 const call2000Button = getButton("call2000");
+const call5000Button = getButton("call5000");
 const hangupButton = getButton("hangup");
 const disconnectButton = getButton("disconnect");
 const audioElement = getAudio("remoteAudio");
@@ -38,6 +39,7 @@ const simpleUserDelegate: SimpleUserDelegate = {
     console.log(`[${displayName}] Call created`);
     callButton.disabled = true;
     call2000Button.disabled = true;
+    call5000Button.disabled = true;
     hangupButton.disabled = false;
     keypadDisabled(true);
     holdCheckboxDisabled(true);
@@ -53,6 +55,7 @@ const simpleUserDelegate: SimpleUserDelegate = {
     console.log(`[${displayName}] Call hangup`);
     callButton.disabled = false;
     call2000Button.disabled = false;
+    call5000Button.disabled = false;
     hangupButton.disabled = true;
     keypadDisabled(true);
     holdCheckboxDisabled(true);
@@ -105,6 +108,7 @@ connectButton.addEventListener("click", () => {
       disconnectButton.disabled = false;
       callButton.disabled = false;
       call2000Button.disabled = false;
+      call5000Button.disabled = false;
       hangupButton.disabled = true;
     })
     .catch((error: Error) => {
@@ -119,6 +123,7 @@ connectButton.addEventListener("click", () => {
 callButton.addEventListener("click", () => {
   callButton.disabled = true;
   call2000Button.disabled = true;
+  call5000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser
     .call(target, {
@@ -135,6 +140,7 @@ callButton.addEventListener("click", () => {
 call2000Button.addEventListener("click", () => {
   callButton.disabled = true;
   call2000Button.disabled = true;
+  call5000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser
     .call("sip:2000@sip.weiyuai.cn", {
@@ -151,6 +157,7 @@ call2000Button.addEventListener("click", () => {
 hangupButton.addEventListener("click", () => {
   callButton.disabled = true;
   call2000Button.disabled = true;
+  call5000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser.hangup().catch((error: Error) => {
     console.error(`[${simpleUser.id}] failed to hangup call`);
@@ -174,6 +181,7 @@ disconnectButton.addEventListener("click", () => {
       disconnectButton.disabled = true;
       callButton.disabled = true;
       call2000Button.disabled = true;
+      call5000Button.disabled = true;
       hangupButton.disabled = true;
     })
     .catch((error: Error) => {
@@ -193,6 +201,23 @@ keypad.forEach((button) => {
       });
     }
   });
+});
+
+// Add click listener to call 5000 button (IVR test)
+call5000Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  simpleUser
+    .call("sip:5000@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      console.error(`[${simpleUser.id}] failed to place call to 5000`);
+      console.error(error);
+      alert("Failed to place call to 5000.\n" + error);
+    });
 });
 
 // Keypad helper function
