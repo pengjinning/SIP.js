@@ -253,3 +253,12 @@ const muteCheckboxDisabled = (disabled: boolean): void => {
 
 // Enable the connect button
 connectButton.disabled = false;
+
+// Auto connect after page load
+window.addEventListener("load", () => {
+  // Reuse existing click handler to keep UI state changes consistent
+  if (!connectButton.disabled) {
+    // Slight delay to ensure elements are ready
+    setTimeout(() => connectButton.click(), 0);
+  }
+});

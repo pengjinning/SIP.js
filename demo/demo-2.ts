@@ -487,3 +487,14 @@ const muteCheckboxDisabled = (disabled: boolean, muteCheckbox: HTMLInputElement)
   muteCheckbox.checked = false;
   muteCheckbox.disabled = disabled;
 };
+
+// Auto connect Alice and Bob after page load
+window.addEventListener("load", () => {
+  const tryClick = (btn: HTMLButtonElement) => {
+    if (!btn.disabled) {
+      setTimeout(() => btn.click(), 0);
+    }
+  };
+  tryClick(connectAlice);
+  tryClick(connectBob);
+});
