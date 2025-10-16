@@ -3,6 +3,7 @@
 /* eslint-disable no-console */
 import { SimpleUser, SimpleUserDelegate, SimpleUserOptions } from "../lib/platform/web/index.js";
 import { name as sipName, version as sipVersion } from "../lib/index.js";
+import type { IncomingResponse } from "../lib/core/messages/incoming-response.js";
 import { getAudio, getButton, getButtons, getInput, getSpan } from "./demo-utils.js";
 // Helper to get modal elements safely
 const getEl = (id: string): HTMLElement => {
@@ -24,7 +25,11 @@ const regExpiryTimeSpan = getSpan("regExpiryTime");
 const connectButton = getButton("connect");
 const callButton = getButton("call");
 const call1000Button = getButton("call1000");
+const call1001Button = getButton("call1001");
 const call1002Button = getButton("call1002");
+const call1003Button = getButton("call1003");
+const call1004Button = getButton("call1004");
+const call1005Button = getButton("call1005");
 const callCustomButton = getButton("callCustom");
 const customNumberInput = getInput("customNumber");
 const call2000Button = getButton("call2000");
@@ -48,6 +53,12 @@ const showIncomingModal = (): void => {
 const hideIncomingModal = (): void => {
   incomingModal.classList.add("hidden");
 };
+
+// 通话状态标志
+// dialingOut: 正在外呼但尚未建立；
+// hasActiveCall: 已建立的通话（来电或去电）。
+let dialingOut = false;
+let hasActiveCall = false;
 
 // WebSocket Server URL
 const webSocketServer = "wss://sip.weiyuai.cn/ws";
@@ -80,7 +91,11 @@ const simpleUserDelegate: SimpleUserDelegate = {
     console.log(`[${displayName}] Call created`);
     callButton.disabled = true;
     call1000Button.disabled = true;
+    call1001Button.disabled = true;
     call1002Button.disabled = true;
+    call1003Button.disabled = true;
+    call1004Button.disabled = true;
+    call1005Button.disabled = true;
     callCustomButton.disabled = true;
     customNumberInput.disabled = true;
     call2000Button.disabled = true;
@@ -92,20 +107,41 @@ const simpleUserDelegate: SimpleUserDelegate = {
   },
   onCallAnswered: (): void => {
     console.log(`[${displayName}] Call answered`);
+    // 通话已建立
+    hasActiveCall = true;
+    dialingOut = false;
     keypadDisabled(false);
     holdCheckboxDisabled(false);
     muteCheckboxDisabled(false);
   },
   onCallReceived: (): void => {
     console.log(`[${displayName}] Incoming call received`);
+    // 若正外呼或已有通话，则自动忙音拒接，避免弹窗干扰
+    if (dialingOut || hasActiveCall) {
+      console.log(
+        `[${displayName}] Busy - auto decline incoming while ${dialingOut ? "dialing" : "in-call"}`
+      );
+      hideIncomingModal();
+      simpleUser.decline().catch((e: Error) => {
+        console.warn("自动拒接失败:", e);
+      });
+      return;
+    }
     showIncomingModal();
   },
   onCallHangup: (): void => {
     console.log(`[${displayName}] Call hangup`);
     hideIncomingModal();
+    // 会话结束，重置标志
+    hasActiveCall = false;
+    dialingOut = false;
     callButton.disabled = false;
     call1000Button.disabled = false;
+    call1001Button.disabled = false;
     call1002Button.disabled = false;
+    call1003Button.disabled = false;
+    call1004Button.disabled = false;
+    call1005Button.disabled = false;
     callCustomButton.disabled = false;
     customNumberInput.disabled = false;
     call2000Button.disabled = false;
@@ -130,6 +166,9 @@ const simpleUserDelegate: SimpleUserDelegate = {
     // 清空注册有效期显示
     regExpiresSpan.innerHTML = "—";
     regExpiryTimeSpan.innerHTML = "—";
+    // 安全重置会话标志
+    hasActiveCall = false;
+    dialingOut = false;
   }
 };
 
@@ -159,7 +198,11 @@ connectButton.addEventListener("click", () => {
   disconnectButton.disabled = true;
   callButton.disabled = true;
   call1000Button.disabled = true;
+  call1001Button.disabled = true;
   call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
   callCustomButton.disabled = true;
   customNumberInput.disabled = true;
   call2000Button.disabled = true;
@@ -170,7 +213,7 @@ connectButton.addEventListener("click", () => {
       userStatusSpan.innerHTML = "已连接";
       return simpleUser.register({
         requestDelegate: {
-          onAccept: (response: any): void => {
+          onAccept: (response: IncomingResponse): void => {
             try {
               const contacts = response.message.getHeaders("contact");
               let expires: number | undefined = undefined;
@@ -209,7 +252,11 @@ connectButton.addEventListener("click", () => {
       disconnectButton.disabled = false;
       callButton.disabled = false;
       call1000Button.disabled = false;
+      call1001Button.disabled = false;
       call1002Button.disabled = false;
+      call1003Button.disabled = false;
+      call1004Button.disabled = false;
+      call1005Button.disabled = false;
       callCustomButton.disabled = false;
       customNumberInput.disabled = false;
       call2000Button.disabled = false;
@@ -269,17 +316,23 @@ incomingDecline.addEventListener("click", () => {
 callButton.addEventListener("click", () => {
   callButton.disabled = true;
   call1000Button.disabled = true;
+  call1001Button.disabled = true;
   call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
   callCustomButton.disabled = true;
   customNumberInput.disabled = true;
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
+  dialingOut = true;
   simpleUser
     .call(target, {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
+      dialingOut = false;
       console.error(`[${simpleUser.id}] failed to place call`);
       console.error(error);
       alert("Failed to place call.\n" + error);
@@ -296,11 +349,13 @@ call1000Button.addEventListener("click", () => {
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
+  dialingOut = true;
   simpleUser
     .call("sip:1000@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
+      dialingOut = false;
       console.error(`[${simpleUser.id}] failed to place call to 1000`);
       console.error(error);
       alert("Failed to place call to 1000.\n" + error);
@@ -317,14 +372,124 @@ call1002Button.addEventListener("click", () => {
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
+  dialingOut = true;
   simpleUser
     .call("sip:1002@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
+      dialingOut = false;
       console.error(`[${simpleUser.id}] failed to place call to 1002`);
       console.error(error);
       alert("Failed to place call to 1002.\n" + error);
+    });
+});
+
+// Add click listener to call 1001 button
+call1001Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call1001Button.disabled = true;
+  call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  dialingOut = true;
+  simpleUser
+    .call("sip:1001@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      dialingOut = false;
+      console.error(`[${simpleUser.id}] failed to place call to 1001`);
+      console.error(error);
+      alert("Failed to place call to 1001.\n" + error);
+    });
+});
+
+// Add click listener to call 1003 button
+call1003Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call1001Button.disabled = true;
+  call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  dialingOut = true;
+  simpleUser
+    .call("sip:1003@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      dialingOut = false;
+      console.error(`[${simpleUser.id}] failed to place call to 1003`);
+      console.error(error);
+      alert("Failed to place call to 1003.\n" + error);
+    });
+});
+
+// Add click listener to call 1004 button
+call1004Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call1001Button.disabled = true;
+  call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  dialingOut = true;
+  simpleUser
+    .call("sip:1004@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      dialingOut = false;
+      console.error(`[${simpleUser.id}] failed to place call to 1004`);
+      console.error(error);
+      alert("Failed to place call to 1004.\n" + error);
+    });
+});
+
+// Add click listener to call 1005 button
+call1005Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call1001Button.disabled = true;
+  call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  dialingOut = true;
+  simpleUser
+    .call("sip:1005@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      dialingOut = false;
+      console.error(`[${simpleUser.id}] failed to place call to 1005`);
+      console.error(error);
+      alert("Failed to place call to 1005.\n" + error);
     });
 });
 
@@ -346,9 +511,11 @@ callCustomButton.addEventListener("click", () => {
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
+  dialingOut = true;
   simpleUser
     .call(targetUri, { inviteWithoutSdp: false })
     .catch((error: Error) => {
+      dialingOut = false;
       console.error(`[${simpleUser.id}] failed to place call to ${targetUri}`);
       console.error(error);
       alert(`Failed to place call to ${targetUri}.\n` + error);
@@ -359,14 +526,17 @@ callCustomButton.addEventListener("click", () => {
 call2000Button.addEventListener("click", () => {
   callButton.disabled = true;
   call1000Button.disabled = true;
+  call1001Button.disabled = true;
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
+  dialingOut = true;
   simpleUser
     .call("sip:2000@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
+      dialingOut = false;
       console.error(`[${simpleUser.id}] failed to place call to 2000`);
       console.error(error);
       alert("Failed to place call to 2000.\n" + error);
@@ -415,6 +585,8 @@ disconnectButton.addEventListener("click", () => {
       userStatusSpan.innerHTML = "未连接";
       regExpiresSpan.innerHTML = "—";
       regExpiryTimeSpan.innerHTML = "—";
+      hasActiveCall = false;
+      dialingOut = false;
     })
     .catch((error: Error) => {
       console.error(`[${simpleUser.id}] failed to disconnect`);
@@ -442,11 +614,13 @@ call5000Button.addEventListener("click", () => {
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
+  dialingOut = true;
   simpleUser
     .call("sip:5000@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
+      dialingOut = false;
       console.error(`[${simpleUser.id}] failed to place call to 5000`);
       console.error(error);
       alert("Failed to place call to 5000.\n" + error);
