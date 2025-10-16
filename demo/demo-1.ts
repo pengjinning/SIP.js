@@ -59,10 +59,15 @@ const hideIncomingModal = (): void => {
 // hasActiveCall: 已建立的通话（来电或去电）。
 let dialingOut = false;
 let hasActiveCall = false;
+// 注册有效期倒计时定时器与到期时间
+let regCountdownTimer: ReturnType<typeof setInterval> | undefined;
+let regExpiryAt: number | undefined; // ms timestamp
 
-// 提示音资源路径（请将文件放到 demo/assets/sounds/ 下）
-const RINGBACK_URL = "./assets/sounds/ringback.mp3"; // 外呼等待音
-const RINGTONE_URL = "./assets/sounds/ringtone.mp3"; // 来电铃声
+// 提示音资源路径（使用仓库中已存在的文件）
+// 外呼等待音：选择“phone-outgoing-call-72202.mp3”
+// 来电铃声：选择“ringtone-027-376908.mp3”
+const RINGBACK_URL = "./assets/sounds/phone-outgoing-call-72202.mp3"; // 外呼等待音
+const RINGTONE_URL = "./assets/sounds/ringtone-027-376908.mp3"; // 来电铃声
 const ringbackAudio = new Audio(RINGBACK_URL);
 ringbackAudio.loop = true;
 ringbackAudio.preload = "auto";
@@ -203,6 +208,7 @@ const simpleUserDelegate: SimpleUserDelegate = {
     // 清空注册有效期显示
     regExpiresSpan.innerHTML = "—";
     regExpiryTimeSpan.innerHTML = "—";
+  stopRegCountdown();
     // 安全重置会话标志
     hasActiveCall = false;
     dialingOut = false;
@@ -219,6 +225,12 @@ const simpleUserOptions: SimpleUserOptions = {
     remote: {
       audio: audioElement
     }
+  },
+  // 让底层 Registerer 自动续注：在过期前按百分比进行 re-REGISTER
+  // expires: 首次注册建议值（秒），refreshFrequency: 在剩余百分比时刷新（50-99）
+  registererOptions: {
+    expires: 600,
+    refreshFrequency: 95
   },
   userAgentOptions: {
     logLevel: "debug",
@@ -270,17 +282,18 @@ connectButton.addEventListener("click", () => {
               }
 
               if (typeof expires === "number" && !Number.isNaN(expires)) {
-                regExpiresSpan.innerHTML = `${expires} 秒`;
-                const expiryDate = new Date(Date.now() + expires * 1000);
-                regExpiryTimeSpan.innerHTML = expiryDate.toLocaleString();
+                // 启动倒计时展示（底层 Registerer 会根据 refreshFrequency 自动续期）
+                startRegCountdown(expires);
               } else {
                 regExpiresSpan.innerHTML = "未知";
                 regExpiryTimeSpan.innerHTML = "—";
+                stopRegCountdown();
               }
             } catch (e) {
               console.warn("解析 REGISTER 响应失败:", e);
               regExpiresSpan.innerHTML = "—";
               regExpiryTimeSpan.innerHTML = "—";
+              stopRegCountdown();
             }
           }
         }
@@ -314,6 +327,8 @@ connectButton.addEventListener("click", () => {
 
 // Incoming modal button handlers
 incomingAccept.addEventListener("click", () => {
+  // 立即停止来电铃声
+  stopAudio(ringtoneAudio);
   incomingAccept.disabled = true;
   incomingDecline.disabled = true;
   simpleUser
@@ -333,6 +348,8 @@ incomingAccept.addEventListener("click", () => {
 });
 
 incomingDecline.addEventListener("click", () => {
+  // 立即停止来电铃声
+  stopAudio(ringtoneAudio);
   incomingAccept.disabled = true;
   incomingDecline.disabled = true;
   simpleUser
@@ -366,12 +383,15 @@ callButton.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call(target, {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call`);
       console.error(error);
       alert("Failed to place call.\n" + error);
@@ -389,12 +409,15 @@ call1000Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:1000@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 1000`);
       console.error(error);
       alert("Failed to place call to 1000.\n" + error);
@@ -412,12 +435,15 @@ call1002Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:1002@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 1002`);
       console.error(error);
       alert("Failed to place call to 1002.\n" + error);
@@ -439,12 +465,15 @@ call1001Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:1001@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 1001`);
       console.error(error);
       alert("Failed to place call to 1001.\n" + error);
@@ -466,12 +495,15 @@ call1003Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:1003@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 1003`);
       console.error(error);
       alert("Failed to place call to 1003.\n" + error);
@@ -493,12 +525,15 @@ call1004Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:1004@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 1004`);
       console.error(error);
       alert("Failed to place call to 1004.\n" + error);
@@ -520,12 +555,15 @@ call1005Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:1005@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 1005`);
       console.error(error);
       alert("Failed to place call to 1005.\n" + error);
@@ -551,10 +589,13 @@ callCustomButton.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call(targetUri, { inviteWithoutSdp: false })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to ${targetUri}`);
       console.error(error);
       alert(`Failed to place call to ${targetUri}.\n` + error);
@@ -570,12 +611,15 @@ call2000Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:2000@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 2000`);
       console.error(error);
       alert("Failed to place call to 2000.\n" + error);
@@ -624,8 +668,12 @@ disconnectButton.addEventListener("click", () => {
       userStatusSpan.innerHTML = "未连接";
       regExpiresSpan.innerHTML = "—";
       regExpiryTimeSpan.innerHTML = "—";
+  stopRegCountdown();
       hasActiveCall = false;
       dialingOut = false;
+      // 确保停止所有提示音
+      stopAudio(ringbackAudio);
+      stopAudio(ringtoneAudio);
     })
     .catch((error: Error) => {
       console.error(`[${simpleUser.id}] failed to disconnect`);
@@ -654,12 +702,15 @@ call5000Button.addEventListener("click", () => {
   call5000Button.disabled = true;
   hangupButton.disabled = true;
   dialingOut = true;
+  // 外呼等待音
+  void playSafe(ringbackAudio);
   simpleUser
     .call("sip:5000@sip.weiyuai.cn", {
       inviteWithoutSdp: false
     })
     .catch((error: Error) => {
       dialingOut = false;
+      stopAudio(ringbackAudio);
       console.error(`[${simpleUser.id}] failed to place call to 5000`);
       console.error(error);
       alert("Failed to place call to 5000.\n" + error);
@@ -733,3 +784,30 @@ window.addEventListener("load", () => {
     setTimeout(() => connectButton.click(), 0);
   }
 });
+
+// ===== 注册有效期展示：倒计时与到时刻 =====
+function startRegCountdown(expiresSeconds: number): void {
+  stopRegCountdown();
+  const now = Date.now();
+  regExpiryAt = now + expiresSeconds * 1000;
+  regExpiryTimeSpan.innerHTML = new Date(regExpiryAt).toLocaleString();
+  const tick = () => {
+    if (!regExpiryAt) return;
+    const remainMs = regExpiryAt - Date.now();
+    const remainSec = Math.max(0, Math.floor(remainMs / 1000));
+    regExpiresSpan.innerHTML = `${remainSec} 秒`;
+    if (remainSec <= 0) {
+      stopRegCountdown();
+    }
+  };
+  tick();
+  regCountdownTimer = setInterval(tick, 1000);
+}
+
+function stopRegCountdown(): void {
+  if (regCountdownTimer) {
+    clearInterval(regCountdownTimer);
+    regCountdownTimer = undefined;
+  }
+  regExpiryAt = undefined;
+}
