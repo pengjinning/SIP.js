@@ -60,6 +60,36 @@ const hideIncomingModal = (): void => {
 let dialingOut = false;
 let hasActiveCall = false;
 
+// 提示音资源路径（请将文件放到 demo/assets/sounds/ 下）
+const RINGBACK_URL = "./assets/sounds/ringback.mp3"; // 外呼等待音
+const RINGTONE_URL = "./assets/sounds/ringtone.mp3"; // 来电铃声
+const ringbackAudio = new Audio(RINGBACK_URL);
+ringbackAudio.loop = true;
+ringbackAudio.preload = "auto";
+ringbackAudio.volume = 0.5;
+const ringtoneAudio = new Audio(RINGTONE_URL);
+ringtoneAudio.loop = true;
+ringtoneAudio.preload = "auto";
+ringtoneAudio.volume = 0.5;
+
+const playSafe = async (audio: HTMLAudioElement): Promise<void> => {
+  try {
+    audio.currentTime = 0;
+    await audio.play();
+  } catch (e) {
+    // 可能因浏览器自动播放策略被阻止，待用户交互后方可播放
+    console.warn("提示音播放被阻止:", e);
+  }
+};
+const stopAudio = (audio: HTMLAudioElement): void => {
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+  } catch {
+    // ignore
+  }
+};
+
 // WebSocket Server URL
 const webSocketServer = "wss://sip.weiyuai.cn/ws";
 serverSpan.innerHTML = webSocketServer;
@@ -110,6 +140,9 @@ const simpleUserDelegate: SimpleUserDelegate = {
     // 通话已建立
     hasActiveCall = true;
     dialingOut = false;
+    // 停止提示音
+    stopAudio(ringbackAudio);
+    stopAudio(ringtoneAudio);
     keypadDisabled(false);
     holdCheckboxDisabled(false);
     muteCheckboxDisabled(false);
@@ -127,6 +160,8 @@ const simpleUserDelegate: SimpleUserDelegate = {
       });
       return;
     }
+    // 非忙时，播放来电铃声
+    void playSafe(ringtoneAudio);
     showIncomingModal();
   },
   onCallHangup: (): void => {
@@ -135,6 +170,8 @@ const simpleUserDelegate: SimpleUserDelegate = {
     // 会话结束，重置标志
     hasActiveCall = false;
     dialingOut = false;
+    stopAudio(ringbackAudio);
+    stopAudio(ringtoneAudio);
     callButton.disabled = false;
     call1000Button.disabled = false;
     call1001Button.disabled = false;
@@ -169,6 +206,8 @@ const simpleUserDelegate: SimpleUserDelegate = {
     // 安全重置会话标志
     hasActiveCall = false;
     dialingOut = false;
+    stopAudio(ringbackAudio);
+    stopAudio(ringtoneAudio);
   }
 };
 
