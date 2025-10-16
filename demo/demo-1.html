@@ -11,116 +11,175 @@
 
 <body>
   <div class="container">
-  <span class="backlink"><a href="index.html">&lt; Index</a></span>
+    <span class="backlink"><a href="index.html">&lt; Index</a></span>
 
-  <h2>示例：语音呼出</h2>
+    <h2>示例：语音呼出</h2>
 
-  <div>
-    当页面加载时，已创建一个 <code>SimpleUser</code>。
-    <ol>
-      <li>将 <code>SimpleUser</code> 连接到服务器</li>
-      <li>发起呼叫</li>
-      <li>挂断通话</li>
-      <li>断开连接</li>
-    </ol>
-  </div>
-
-  <div class="panel">
-    <strong>当前登录：</strong>
-    <span id="userDisplayName"></span>
-    （<code><span id="userAor"></span></code>）
-    - <span id="userStatus">未连接</span>
-  </div>
-
-  <div class="panel">
-    <strong>更多信息：</strong>
-    <div>服务器地址：<code><span id="serverInfo"></span></code></div>
-    <div>UA：<span id="uaName"></span> v<span id="uaVersion"></span></div>
-    <div>注册有效期：<span id="regExpires">—</span></div>
-    <div>过期时间：<span id="regExpiryTime">—</span></div>
-  </div>
-
-  <ol>
-    <li><button id="connect" disabled>连接</button> 至 <code><span id="server"></span></code></li>
-    <li><button id="call" disabled>发起呼叫</button> 目标 <code><span id="target"></span></code></li>
-    <li><button id="call1000" disabled>呼叫 1000</button> - 拨打 <code>sip:1000@sip.weiyuai.cn</code></li>
-    <li><button id="call1001" disabled>呼叫 1001</button> - 拨打 <code>sip:1001@sip.weiyuai.cn</code></li>
-    <li><button id="call1002" disabled>呼叫 1002</button> - 拨打 <code>sip:1002@sip.weiyuai.cn</code></li>
-    <li><button id="call1003" disabled>呼叫 1003</button> - 拨打 <code>sip:1003@sip.weiyuai.cn</code></li>
-    <li><button id="call1004" disabled>呼叫 1004</button> - 拨打 <code>sip:1004@sip.weiyuai.cn</code></li>
-    <li><button id="call1005" disabled>呼叫 1005</button> - 拨打 <code>sip:1005@sip.weiyuai.cn</code></li>
-    <li><button id="call2000" disabled>呼叫 2000</button> - 拨打 <code>sip:2000@sip.weiyuai.cn</code></li>
-    <li><button id="call5000" disabled>呼叫 5000</button> - 拨打 <code>sip:5000@sip.weiyuai.cn</code></li>
-    <li>
-      <input id="customNumber" type="text" placeholder="输入号码，例如 1006 或 sip:1006@sip.weiyuai.cn" style="width: 320px;" disabled />
-      <button id="callCustom" disabled>拨打</button>
-    </li>
-    <li><button id="hangup" disabled>挂断</button></li>
-    <li><button id="disconnect" disabled>断开</button></li>
-  </ol>
-
-  <p>
-    当通话建立后，远端音频会播放在下面的 HTML5 音频元素中……
-  </p>
-  <audio id="remoteAudio" controls>
-    <p>您的浏览器不支持 HTML5 音频。</p>
-  </audio>
-
-  <p>
-    在通话过程中，可使用以下“键盘”发送 DTMF……
-  </p>
-  <div class="dtmf">已发送 DTMF：<span id="dtmf"></span></div>
-  <div>
     <div>
-      <button class="keypad" disabled>1</button>
-      <button class="keypad" disabled>2</button>
-      <button class="keypad" disabled>3</button>
-    </div>
-    <div>
-      <button class="keypad" disabled>4</button>
-      <button class="keypad" disabled>5</button>
-      <button class="keypad" disabled>6</button>
-    </div>
-    <div>
-      <button class="keypad" disabled>7</button>
-      <button class="keypad" disabled>8</button>
-      <button class="keypad" disabled>9</button>
-    </div>
-    <div>
-      <button class="keypad" disabled>*</button>
-      <button class="keypad" disabled>0</button>
-      <button class="keypad" disabled>#</button>
-    </div>
-  </div>
+      当页面加载时，已创建一个 <code>SimpleUser</code>。
+      <ol>
+        当通话建立后，远端媒体会通过下方的视频元素播放；本地摄像头预览显示在左侧小窗。
+        <li>发起呼叫</li>
+        <!-- 备注：视频中已包含音频轨道，因此此处不再单独输出远端音频元素。 -->
 
-  <p>
-    在通话过程中，可以将会话保持或静音……
-  </p>
-  <div>
-    <input type="checkbox" id="hold" name="hold" disabled>
-    <label for="hold">保持</label>
-  </div>
-  <div>
-    <input type="checkbox" id="mute" name="mute" disabled>
-    <label for="mute">静音</label>
-  </div>
+        <div class="panel">
+          <strong>当前登录：</strong>
+          <span id="userDisplayName"></span>
+          （<code><span id="userAor"></span></code>）
+          - <span id="userStatus">未连接</span>
+        </div>
 
-  <!-- 来电弹窗 -->
-  <div id="incomingModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="incomingTitle">
-    <div class="modal" tabindex="-1">
-      <h3 id="incomingTitle">来电提示</h3>
-      <p id="incomingText">来电，是否接听？</p>
-      <div class="actions">
-        <button id="incomingAccept">接听</button>
-        <button id="incomingDecline">拒绝</button>
-      </div>
+        <div class="panel">
+          <strong>更多信息：</strong>
+          <div>服务器地址：<code><span id="serverInfo"></span></code></div>
+          <div>UA：<span id="uaName"></span> v<span id="uaVersion"></span></div>
+          <div>注册有效期：<span id="regExpires">—</span></div>
+          <div>过期时间：<span id="regExpiryTime">—</span></div>
+          <div>当前会话：<span id="callStatus">空闲</span></div>
+          <div>对端号码：<code><span id="callPeer">—</span></code></div>
+        </div>
+
+        <ol>
+          <li><button id="connect" disabled>连接</button> 至 <code><span id="server"></span></code></li>
+          <li>
+            <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+              <div>
+                <div style="font-weight:600; margin-bottom:6px;">音频呼叫</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:750px;">
+                  <button id="call" disabled>回声 echo</button>
+                  <button id="call1000" disabled>音频 1000</button>
+                  <button id="call1001" disabled>音频 1001</button>
+                  <button id="call1002" disabled>音频 1002</button>
+                  <button id="call1003" disabled>音频 1003</button>
+                  <button id="call1004" disabled>音频 1004</button>
+                  <button id="call1005" disabled>音频 1005</button>
+                </div>
+              </div>
+
+              <div>
+                <div style="font-weight:600; margin-bottom:6px;">视频呼叫</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:750px;">
+                  <button id="vcall1000" disabled>视频 1000</button>
+                  <button id="vcall1001" disabled>视频 1001</button>
+                  <button id="vcall1002" disabled>视频 1002</button>
+                  <button id="vcall1003" disabled>视频 1003</button>
+                  <button id="vcall1004" disabled>视频 1004</button>
+                  <button id="vcall1005" disabled>视频 1005</button>
+                  <button id="vcall3000" disabled>视频 3000</button>
+                  <button id="vcall3001" disabled>视频 3001</button>
+                  <button id="vcall3002" disabled>视频 3002</button>
+                </div>
+                <!-- 视频预览区域移动到“视频呼叫”按钮下方 -->
+                <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+                  <div>
+                    <div style="font-weight:bold; margin-bottom:4px;">本地视频</div>
+                    <video id="videoLocal" autoplay playsinline muted
+                      style="width:200px; background:#000; border-radius:4px;"></video>
+                  </div>
+                  <div>
+                    <div style="font-weight:bold; margin-bottom:4px;">远端视频</div>
+                    <video id="videoRemote" autoplay playsinline
+                      style="width:360px; background:#000; border-radius:4px;"></video>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style="font-weight:600; margin-bottom:6px;">音频AI 机器人</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:750px;">
+                  <button id="call9200" disabled>音频AI 9200</button>
+                  <button id="call9201" disabled>音频AI 9201</button>
+                  <button id="call9203" disabled>音频AI 9203</button>
+                </div>
+              </div>
+              <div>
+                <div style="font-weight:600; margin-bottom:6px;">会议/IVR</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:750px;">
+                  <button id="call3000" disabled>会议 3000</button>
+                  <button id="call3001" disabled>会议 3001</button>
+                  <button id="call3002" disabled>会议 3002</button>
+                  <button id="call5000" disabled>IVR 5000</button>
+                </div>
+              </div>
+              <div>
+                <div style="font-weight:600; margin-bottom:6px;">自定义/控制</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:750px;">
+                  <input id="customNumber" type="text" placeholder="输入号码，例如 1006 或 sip:1006@sip.weiyuai.cn"
+                    style="width: 260px;" disabled />
+                  <button id="callCustom" disabled>拨打</button>
+                  <button id="hangup" disabled>挂断</button>
+                  <button id="disconnect" disabled>断开</button>
+                </div>
+              </div>
+            </div>
+            <!-- 兼容脚本中的 target 展示占位 -->
+            <span id="target" style="display:none;">sip:echo@sip.weiyuai.cn</span>
+          </li>
+        </ol>
+
+        <p>
+          当通话建立后，远端音频会播放在下面的 HTML5 音频元素中……
+        </p>
+        <audio id="remoteAudio" controls>
+          <p>您的浏览器不支持 HTML5 音频。</p>
+        </audio>
+
+        <p>
+          在通话过程中，可使用以下“键盘”发送 DTMF……
+        </p>
+        <div class="dtmf">已发送 DTMF：<span id="dtmf"></span></div>
+        <div>
+          <div>
+            <button class="keypad" disabled>1</button>
+            <button class="keypad" disabled>2</button>
+            <button class="keypad" disabled>3</button>
+          </div>
+          <div>
+            <button class="keypad" disabled>4</button>
+            <button class="keypad" disabled>5</button>
+            <button class="keypad" disabled>6</button>
+          </div>
+          <div>
+            <button class="keypad" disabled>7</button>
+            <button class="keypad" disabled>8</button>
+            <button class="keypad" disabled>9</button>
+          </div>
+          <div>
+            <button class="keypad" disabled>*</button>
+            <button class="keypad" disabled>0</button>
+            <button class="keypad" disabled>#</button>
+          </div>
+        </div>
+
+        <p>
+          在通话过程中，可以将会话保持或静音……
+        </p>
+        <div>
+          <input type="checkbox" id="hold" name="hold" disabled>
+          <label for="hold">保持</label>
+        </div>
+        <div>
+          <input type="checkbox" id="mute" name="mute" disabled>
+          <label for="mute">静音</label>
+        </div>
+
+        <!-- 来电弹窗 -->
+        <div id="incomingModal" class="modal-overlay hidden" role="dialog" aria-modal="true"
+          aria-labelledby="incomingTitle">
+          <div class="modal" tabindex="-1">
+            <h3 id="incomingTitle">来电提示</h3>
+            <p id="incomingText">来电，是否接听？</p>
+            <div class="actions">
+              <button id="incomingAccept">接听</button>
+              <button id="incomingDecline">拒绝</button>
+            </div>
+          </div>
+        </div>
+
+        <script src="./dist/demo-1.js"
+          onerror="alert('To run this demo you must first build the library and demo source! See the README.')">
+          </script>
     </div>
-  </div>
-
-  <script src="./dist/demo-1.js"
-    onerror="alert('To run this demo you must first build the library and demo source! See the README.')">
-    </script>
-  </div>
 </body>
 
 </html>
