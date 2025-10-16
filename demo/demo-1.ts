@@ -2,11 +2,18 @@
 /* eslint-disable no-console */
 import { SimpleUser, SimpleUserDelegate, SimpleUserOptions } from "../lib/platform/web/index.js";
 import { getAudio, getButton, getButtons, getInput, getSpan } from "./demo-utils.js";
+// Helper to get modal elements safely
+const getEl = (id: string): HTMLElement => {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Element "${id}" not found.`);
+  return el;
+};
 
 const serverSpan = getSpan("server");
 const targetSpan = getSpan("target");
 const connectButton = getButton("connect");
 const callButton = getButton("call");
+const call1000Button = getButton("call1000");
 const call2000Button = getButton("call2000");
 const call5000Button = getButton("call5000");
 const hangupButton = getButton("hangup");
@@ -16,14 +23,26 @@ const keypad = getButtons("keypad");
 const dtmfSpan = getSpan("dtmf");
 const holdCheckbox = getInput("hold");
 const muteCheckbox = getInput("mute");
+// Incoming modal elements
+const incomingModal = getEl("incomingModal");
+const incomingAccept = getButton("incomingAccept");
+const incomingDecline = getButton("incomingDecline");
+
+const showIncomingModal = (): void => {
+  incomingModal.classList.remove("hidden");
+};
+
+const hideIncomingModal = (): void => {
+  incomingModal.classList.add("hidden");
+};
 
 // WebSocket Server URL
 const webSocketServer = "wss://sip.weiyuai.cn/ws";
 serverSpan.innerHTML = webSocketServer;
 
 // Demo user AOR and credentials
-const aor = "sip:alice@sip.weiyuai.cn";
-const AUTH_USER = "alice";
+const aor = "sip:1006@sip.weiyuai.cn";
+const AUTH_USER = "1006";
 const AUTH_PASS = "bytedesk123";
 
 // Destination URI
@@ -31,13 +50,14 @@ const target = "sip:echo@sip.weiyuai.cn";
 targetSpan.innerHTML = target;
 
 // Name for demo user
-const displayName = "Alice";
+const displayName = "1006";
 
 // SimpleUser delegate
 const simpleUserDelegate: SimpleUserDelegate = {
   onCallCreated: (): void => {
     console.log(`[${displayName}] Call created`);
     callButton.disabled = true;
+    call1000Button.disabled = true;
     call2000Button.disabled = true;
     call5000Button.disabled = true;
     hangupButton.disabled = false;
@@ -51,9 +71,15 @@ const simpleUserDelegate: SimpleUserDelegate = {
     holdCheckboxDisabled(false);
     muteCheckboxDisabled(false);
   },
+  onCallReceived: (): void => {
+    console.log(`[${displayName}] Incoming call received`);
+    showIncomingModal();
+  },
   onCallHangup: (): void => {
     console.log(`[${displayName}] Call hangup`);
+    hideIncomingModal();
     callButton.disabled = false;
+    call1000Button.disabled = false;
     call2000Button.disabled = false;
     call5000Button.disabled = false;
     hangupButton.disabled = true;
@@ -98,6 +124,7 @@ connectButton.addEventListener("click", () => {
   connectButton.disabled = true;
   disconnectButton.disabled = true;
   callButton.disabled = true;
+  call1000Button.disabled = true;
   call2000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser
@@ -107,6 +134,7 @@ connectButton.addEventListener("click", () => {
       connectButton.disabled = true;
       disconnectButton.disabled = false;
       callButton.disabled = false;
+      call1000Button.disabled = false;
       call2000Button.disabled = false;
       call5000Button.disabled = false;
       hangupButton.disabled = true;
@@ -119,9 +147,49 @@ connectButton.addEventListener("click", () => {
     });
 });
 
+// Incoming modal button handlers
+incomingAccept.addEventListener("click", () => {
+  incomingAccept.disabled = true;
+  incomingDecline.disabled = true;
+  simpleUser
+    .answer()
+    .then(() => {
+      hideIncomingModal();
+      incomingAccept.disabled = false;
+      incomingDecline.disabled = false;
+    })
+    .catch((error: Error) => {
+      incomingAccept.disabled = false;
+      incomingDecline.disabled = false;
+      console.error(`[${simpleUser.id}] failed to answer call`);
+      console.error(error);
+      alert("Failed to answer call.\n" + error);
+    });
+});
+
+incomingDecline.addEventListener("click", () => {
+  incomingAccept.disabled = true;
+  incomingDecline.disabled = true;
+  simpleUser
+    .decline()
+    .then(() => {
+      hideIncomingModal();
+      incomingAccept.disabled = false;
+      incomingDecline.disabled = false;
+    })
+    .catch((error: Error) => {
+      incomingAccept.disabled = false;
+      incomingDecline.disabled = false;
+      console.error(`[${simpleUser.id}] failed to decline call`);
+      console.error(error);
+      alert("Failed to decline call.\n" + error);
+    });
+});
+
 // Add click listener to call button
 callButton.addEventListener("click", () => {
   callButton.disabled = true;
+  call1000Button.disabled = true;
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
@@ -136,9 +204,28 @@ callButton.addEventListener("click", () => {
     });
 });
 
+// Add click listener to call 1000 button
+call1000Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  simpleUser
+    .call("sip:1000@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      console.error(`[${simpleUser.id}] failed to place call to 1000`);
+      console.error(error);
+      alert("Failed to place call to 1000.\n" + error);
+    });
+});
+
 // Add click listener to call 2000 button
 call2000Button.addEventListener("click", () => {
   callButton.disabled = true;
+  call1000Button.disabled = true;
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
@@ -156,6 +243,7 @@ call2000Button.addEventListener("click", () => {
 // Add click listener to hangup button
 hangupButton.addEventListener("click", () => {
   callButton.disabled = true;
+  call1000Button.disabled = true;
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
@@ -180,6 +268,7 @@ disconnectButton.addEventListener("click", () => {
       connectButton.disabled = false;
       disconnectButton.disabled = true;
       callButton.disabled = true;
+      call1000Button.disabled = true;
       call2000Button.disabled = true;
       call5000Button.disabled = true;
       hangupButton.disabled = true;
