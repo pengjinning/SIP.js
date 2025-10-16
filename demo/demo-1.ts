@@ -1,6 +1,8 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-console */
 import { SimpleUser, SimpleUserDelegate, SimpleUserOptions } from "../lib/platform/web/index.js";
+import { name as sipName, version as sipVersion } from "../lib/index.js";
 import { getAudio, getButton, getButtons, getInput, getSpan } from "./demo-utils.js";
 // Helper to get modal elements safely
 const getEl = (id: string): HTMLElement => {
@@ -10,10 +12,21 @@ const getEl = (id: string): HTMLElement => {
 };
 
 const serverSpan = getSpan("server");
+const serverInfoSpan = getSpan("serverInfo");
 const targetSpan = getSpan("target");
+const userDisplayNameSpan = getSpan("userDisplayName");
+const userAorSpan = getSpan("userAor");
+const userStatusSpan = getSpan("userStatus");
+const uaNameSpan = getSpan("uaName");
+const uaVersionSpan = getSpan("uaVersion");
+const regExpiresSpan = getSpan("regExpires");
+const regExpiryTimeSpan = getSpan("regExpiryTime");
 const connectButton = getButton("connect");
 const callButton = getButton("call");
 const call1000Button = getButton("call1000");
+const call1002Button = getButton("call1002");
+const callCustomButton = getButton("callCustom");
+const customNumberInput = getInput("customNumber");
 const call2000Button = getButton("call2000");
 const call5000Button = getButton("call5000");
 const hangupButton = getButton("hangup");
@@ -39,6 +52,7 @@ const hideIncomingModal = (): void => {
 // WebSocket Server URL
 const webSocketServer = "wss://sip.weiyuai.cn/ws";
 serverSpan.innerHTML = webSocketServer;
+serverInfoSpan.innerHTML = webSocketServer;
 
 // Demo user AOR and credentials
 const aor = "sip:1006@sip.weiyuai.cn";
@@ -51,6 +65,14 @@ targetSpan.innerHTML = target;
 
 // Name for demo user
 const displayName = "1006";
+// Initialize user info panel
+userDisplayNameSpan.innerHTML = displayName;
+userAorSpan.innerHTML = aor;
+userStatusSpan.innerHTML = "未连接";
+uaNameSpan.innerHTML = sipName;
+uaVersionSpan.innerHTML = String(sipVersion);
+regExpiresSpan.innerHTML = "—";
+regExpiryTimeSpan.innerHTML = "—";
 
 // SimpleUser delegate
 const simpleUserDelegate: SimpleUserDelegate = {
@@ -58,6 +80,9 @@ const simpleUserDelegate: SimpleUserDelegate = {
     console.log(`[${displayName}] Call created`);
     callButton.disabled = true;
     call1000Button.disabled = true;
+    call1002Button.disabled = true;
+    callCustomButton.disabled = true;
+    customNumberInput.disabled = true;
     call2000Button.disabled = true;
     call5000Button.disabled = true;
     hangupButton.disabled = false;
@@ -80,6 +105,9 @@ const simpleUserDelegate: SimpleUserDelegate = {
     hideIncomingModal();
     callButton.disabled = false;
     call1000Button.disabled = false;
+    call1002Button.disabled = false;
+    callCustomButton.disabled = false;
+    customNumberInput.disabled = false;
     call2000Button.disabled = false;
     call5000Button.disabled = false;
     hangupButton.disabled = true;
@@ -93,9 +121,15 @@ const simpleUserDelegate: SimpleUserDelegate = {
   },
   onRegistered: (): void => {
     console.log(`[${displayName}] Registered as ${aor}`);
+    userStatusSpan.innerHTML = "已注册";
   },
   onUnregistered: (): void => {
     console.log(`[${displayName}] Unregistered`);
+    // 若仍连接但未注册
+    userStatusSpan.innerHTML = simpleUser.isConnected() ? "未注册" : "未连接";
+    // 清空注册有效期显示
+    regExpiresSpan.innerHTML = "—";
+    regExpiryTimeSpan.innerHTML = "—";
   }
 };
 
@@ -125,25 +159,70 @@ connectButton.addEventListener("click", () => {
   disconnectButton.disabled = true;
   callButton.disabled = true;
   call1000Button.disabled = true;
+  call1002Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
   call2000Button.disabled = true;
   hangupButton.disabled = true;
   simpleUser
     .connect()
-    .then(() => simpleUser.register()) // connect 后自动注册
+    .then(() => {
+      userStatusSpan.innerHTML = "已连接";
+      return simpleUser.register({
+        requestDelegate: {
+          onAccept: (response: any): void => {
+            try {
+              const contacts = response.message.getHeaders("contact");
+              let expires: number | undefined = undefined;
+              for (let i = 0; i < contacts.length; i++) {
+                const raw = contacts[i];
+                const m = /expires\s*=\s*(\d+)/i.exec(raw);
+                if (m) {
+                  expires = Number(m[1]);
+                  break;
+                }
+              }
+              if (expires === undefined && response.message.hasHeader("expires")) {
+                const hdr = response.message.getHeader("expires");
+                if (hdr) expires = Number(hdr);
+              }
+
+              if (typeof expires === "number" && !Number.isNaN(expires)) {
+                regExpiresSpan.innerHTML = `${expires} 秒`;
+                const expiryDate = new Date(Date.now() + expires * 1000);
+                regExpiryTimeSpan.innerHTML = expiryDate.toLocaleString();
+              } else {
+                regExpiresSpan.innerHTML = "未知";
+                regExpiryTimeSpan.innerHTML = "—";
+              }
+            } catch (e) {
+              console.warn("解析 REGISTER 响应失败:", e);
+              regExpiresSpan.innerHTML = "—";
+              regExpiryTimeSpan.innerHTML = "—";
+            }
+          }
+        }
+      });
+    }) // connect 后自动注册
     .then(() => {
       connectButton.disabled = true;
       disconnectButton.disabled = false;
       callButton.disabled = false;
       call1000Button.disabled = false;
+      call1002Button.disabled = false;
+      callCustomButton.disabled = false;
+      customNumberInput.disabled = false;
       call2000Button.disabled = false;
       call5000Button.disabled = false;
       hangupButton.disabled = true;
+      userStatusSpan.innerHTML = "已注册";
     })
     .catch((error: Error) => {
       connectButton.disabled = false;
       console.error(`[${simpleUser.id}] failed to connect/register`);
       console.error(error);
       alert("Failed to connect/register.\n" + error);
+      userStatusSpan.innerHTML = "未连接";
     });
 });
 
@@ -190,6 +269,9 @@ incomingDecline.addEventListener("click", () => {
 callButton.addEventListener("click", () => {
   callButton.disabled = true;
   call1000Button.disabled = true;
+  call1002Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
@@ -208,6 +290,9 @@ callButton.addEventListener("click", () => {
 call1000Button.addEventListener("click", () => {
   callButton.disabled = true;
   call1000Button.disabled = true;
+  call1002Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
   call2000Button.disabled = true;
   call5000Button.disabled = true;
   hangupButton.disabled = true;
@@ -219,6 +304,54 @@ call1000Button.addEventListener("click", () => {
       console.error(`[${simpleUser.id}] failed to place call to 1000`);
       console.error(error);
       alert("Failed to place call to 1000.\n" + error);
+    });
+});
+
+// Add click listener to call 1002 button
+call1002Button.addEventListener("click", () => {
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call1002Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  simpleUser
+    .call("sip:1002@sip.weiyuai.cn", {
+      inviteWithoutSdp: false
+    })
+    .catch((error: Error) => {
+      console.error(`[${simpleUser.id}] failed to place call to 1002`);
+      console.error(error);
+      alert("Failed to place call to 1002.\n" + error);
+    });
+});
+
+// Add click listener to call custom number button
+callCustomButton.addEventListener("click", () => {
+  const raw = (customNumberInput.value || "").trim();
+  if (!raw) {
+    alert("请输入要拨打的号码。");
+    return;
+  }
+  // 构造 SIP URI：允许用户直接输入完整 sip:URI；否则按号码拼接域名
+  const targetUri = raw.startsWith("sip:") ? raw : `sip:${raw}@sip.weiyuai.cn`;
+
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call1002Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
+  call2000Button.disabled = true;
+  call5000Button.disabled = true;
+  hangupButton.disabled = true;
+  simpleUser
+    .call(targetUri, { inviteWithoutSdp: false })
+    .catch((error: Error) => {
+      console.error(`[${simpleUser.id}] failed to place call to ${targetUri}`);
+      console.error(error);
+      alert(`Failed to place call to ${targetUri}.\n` + error);
     });
 });
 
@@ -261,6 +394,10 @@ disconnectButton.addEventListener("click", () => {
   callButton.disabled = true;
   call2000Button.disabled = true;
   hangupButton.disabled = true;
+  call1000Button.disabled = true;
+  call1002Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
   Promise.resolve()
     .then(() => simpleUser.unregister().catch(() => undefined)) // 先注销,忽略失败
     .then(() => simpleUser.disconnect())
@@ -269,14 +406,21 @@ disconnectButton.addEventListener("click", () => {
       disconnectButton.disabled = true;
       callButton.disabled = true;
       call1000Button.disabled = true;
+      call1002Button.disabled = true;
+      callCustomButton.disabled = true;
+      customNumberInput.disabled = true;
       call2000Button.disabled = true;
       call5000Button.disabled = true;
       hangupButton.disabled = true;
+      userStatusSpan.innerHTML = "未连接";
+      regExpiresSpan.innerHTML = "—";
+      regExpiryTimeSpan.innerHTML = "—";
     })
     .catch((error: Error) => {
       console.error(`[${simpleUser.id}] failed to disconnect`);
       console.error(error);
       alert("Failed to disconnect.\n" + error);
+      userStatusSpan.innerHTML = "未连接";
     });
 });
 

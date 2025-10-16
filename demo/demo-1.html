@@ -25,12 +25,32 @@
     </ol>
   </div>
 
+  <div class="panel">
+    <strong>当前登录：</strong>
+    <span id="userDisplayName"></span>
+    （<code><span id="userAor"></span></code>）
+    - <span id="userStatus">未连接</span>
+  </div>
+
+  <div class="panel">
+    <strong>更多信息：</strong>
+    <div>服务器地址：<code><span id="serverInfo"></span></code></div>
+    <div>UA：<span id="uaName"></span> v<span id="uaVersion"></span></div>
+    <div>注册有效期：<span id="regExpires">—</span></div>
+    <div>过期时间：<span id="regExpiryTime">—</span></div>
+  </div>
+
   <ol>
     <li><button id="connect" disabled>连接</button> 至 <code><span id="server"></span></code></li>
     <li><button id="call" disabled>发起呼叫</button> 目标 <code><span id="target"></span></code></li>
     <li><button id="call1000" disabled>呼叫 1000</button> - 拨打 <code>sip:1000@sip.weiyuai.cn</code></li>
+    <li><button id="call1002" disabled>呼叫 1002</button> - 拨打 <code>sip:1002@sip.weiyuai.cn</code></li>
     <li><button id="call2000" disabled>呼叫 2000</button> - 拨打 <code>sip:2000@sip.weiyuai.cn</code></li>
     <li><button id="call5000" disabled>呼叫 5000</button> - 拨打 <code>sip:5000@sip.weiyuai.cn</code></li>
+    <li>
+      <input id="customNumber" type="text" placeholder="输入号码，例如 1006 或 sip:1006@sip.weiyuai.cn" style="width: 320px;" disabled />
+      <button id="callCustom" disabled>拨打</button>
+    </li>
     <li><button id="hangup" disabled>挂断</button></li>
     <li><button id="disconnect" disabled>断开</button></li>
   </ol>

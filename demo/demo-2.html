@@ -12,40 +12,40 @@
     <div class="container">
     <span class="backlink"><a href="index.html">&lt; Index</a></span>
 
-    <h2>Demo: Video Call - Between Two Users</h2>
+  <h2>示例：两用户之间的视频通话</h2>
 
     <div>
-      When this page was loaded, a <code>SimpleUser</code> was created for two users - Alice & Bob
+      当页面加载时，为两位用户（Alice & Bob）各创建了一个 <code>SimpleUser</code>
       <ol>
-        <li>Connect with SIP WebSocket Server</li>
-        <li>Register user to receive calls</li>
-        <li>Initiate a video session</li>
-        <li>End the video session</li>
-        <li>Unregister</li>
-        <li>Disconnect</li>
+        <li>连接到 SIP WebSocket 服务器</li>
+        <li>注册用户以便接收来电</li>
+        <li>发起视频会话</li>
+        <li>结束视频会话</li>
+        <li>取消注册</li>
+        <li>断开连接</li>
       </ol>
     </div>
 
     <div class="content">
       <div id="alice" class="user">
-        <h4>Alice</h4>
+  <h4>Alice</h4>
         <div class="video">
           <video id="videoRemoteAlice" width="100%" muted="muted">
-            <p>Your browser doesn't support HTML5 video.</p>
+            <p>您的浏览器不支持 HTML5 视频。</p>
           </video>
           <div class="video-local">
             <video id="videoLocalAlice" width="100%" muted="muted">
-              <p>Your browser doesn't support HTML5 video.</p>
+              <p>您的浏览器不支持 HTML5 视频。</p>
             </video>
           </div>
         </div>
         <ol>
-          <li><button id="connectAlice" disabled>Connect</button></li>
-          <li><button id="registerAlice" disabled>Register User</button></li>
-          <li><button id="beginAlice" disabled>Initiate Video Session</button></li>
-          <li><button id="endAlice" disabled>End Video Session</button></li>
-          <li><button id="unregisterAlice" disabled>Unregister</button></li>
-          <li><button id="disconnectAlice" disabled>Disconnect</button></li>
+          <li><button id="connectAlice" disabled>连接</button></li>
+          <li><button id="registerAlice" disabled>注册用户</button></li>
+          <li><button id="beginAlice" disabled>发起视频会话</button></li>
+          <li><button id="endAlice" disabled>结束视频会话</button></li>
+          <li><button id="unregisterAlice" disabled>取消注册</button></li>
+          <li><button id="disconnectAlice" disabled>断开</button></li>
         </ol>
         <div>
           <input type="checkbox" id="holdAlice" name="holdAlice" disabled />
@@ -58,24 +58,24 @@
       </div>
 
       <div id="bob" class="user">
-        <h4>Bob</h4>
+          <h4>Bob</h4>
         <div class="video">
           <video id="videoRemoteBob" width="100%" muted="muted">
-            <p>Your browser doesn't support HTML5 video.</p>
+            <p>您的浏览器不支持 HTML5 视频。</p>
           </video>
           <div class="video-local">
             <video id="videoLocalBob" width="100%" muted="muted">
-              <p>Your browser doesn't support HTML5 video.</p>
+              <p>您的浏览器不支持 HTML5 视频。</p>
             </video>
           </div>
         </div>
         <ol>
-          <li><button id="connectBob" disabled>Connect</button></li>
-          <li><button id="registerBob" disabled>Register User</button></li>
-          <li><button id="beginBob" disabled>Initiate Video Session</button></li>
-          <li><button id="endBob" disabled>End Video Session</button></li>
-          <li><button id="unregisterBob" disabled>Unregister</button></li>
-          <li><button id="disconnectBob" disabled>Disconnect</button></li>
+          <li><button id="connectBob" disabled>连接</button></li>
+          <li><button id="registerBob" disabled>注册用户</button></li>
+          <li><button id="beginBob" disabled>发起视频会话</button></li>
+          <li><button id="endBob" disabled>结束视频会话</button></li>
+          <li><button id="unregisterBob" disabled>取消注册</button></li>
+          <li><button id="disconnectBob" disabled>断开</button></li>
         </ol>
         <div>
           <input type="checkbox" id="holdBob" name="holdBob" disabled />

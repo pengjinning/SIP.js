@@ -13,17 +13,17 @@
   <div class="container">
   <span class="backlink"><a href="index.html">&lt; Index</a></span>
 
-  <h2>Demo: Data Channel - Between Two Users</h2>
+  <h2>示例：两用户之间的数据通道</h2>
 
   <div>
-    When this page was loaded, a <code>SimpleUser</code> was created for two users - Alice & Bob
+    当页面加载时，为两位用户（Alice & Bob）各创建了一个 <code>SimpleUser</code>
     <ol>
-      <li>Connect with SIP WebSocket Server</li>
-      <li>Register user to receive calls</li>
-      <li>Initiate a data session</li>
-      <li>End the data session</li>
-      <li>Unregister</li>
-      <li>Disconnect</li>
+      <li>连接到 SIP WebSocket 服务器</li>
+      <li>注册用户以便接收来电</li>
+      <li>发起带数据通道的会话</li>
+      <li>结束数据会话</li>
+      <li>取消注册</li>
+      <li>断开连接</li>
     </ol>
   </div>
 
@@ -31,9 +31,9 @@
     <div id="alice" class="user">
       <h4>Alice</h4>
       <div class="message-box">
-        <input class="message-box-message" type="text" id="messageAlice" placeholder="Message Bob" disabled>
-        <button id="sendAlice" disabled>Send</button>
-        <div class="message-box-received disabled" id="receiveAlice" disabled></div>
+  <input class="message-box-message" type="text" id="messageAlice" placeholder="发送给 Bob 的消息" disabled>
+  <button id="sendAlice" disabled>发送</button>
+  <div class="message-box-received disabled" id="receiveAlice" disabled></div>
       </div>
       <ol>
         <li><button id="connectAlice" disabled>Connect</button></li>
@@ -48,8 +48,8 @@
     <div id="bob" class="user">
       <h4>Bob</h4>
       <div class="message-box">
-        <input class="message-box-message" type="text" id="messageBob" placeholder="Message Alice" disabled>
-        <button id="sendBob" disabled>Send</button>
+  <input class="message-box-message" type="text" id="messageBob" placeholder="发送给 Alice 的消息" disabled>
+  <button id="sendBob" disabled>发送</button>
         <div class="message-box-received disabled" id="receiveBob"></div>
       </div>
       <ol>
