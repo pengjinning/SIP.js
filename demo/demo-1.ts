@@ -75,6 +75,62 @@ const hideIncomingModal = (): void => {
   incomingModal.classList.add("hidden");
 };
 
+// —— 通用 UI 辅助：统一禁用所有外呼相关按钮 ——
+const disableAllCallButtons = (): void => {
+  // 音频外呼
+  callButton.disabled = true;
+  call1000Button.disabled = true;
+  call1001Button.disabled = true;
+  call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
+  callCustomButton.disabled = true;
+  customNumberInput.disabled = true;
+  call9200Button.disabled = true;
+  call9201Button.disabled = true;
+  call9203Button.disabled = true;
+  call5000Button.disabled = true;
+  call3000Button.disabled = true;
+  call3001Button.disabled = true;
+  call3002Button.disabled = true;
+  // 视频外呼
+  vcall1000Button.disabled = true;
+  vcall1001Button.disabled = true;
+  vcall1002Button.disabled = true;
+  vcall1003Button.disabled = true;
+  vcall1004Button.disabled = true;
+  vcall1005Button.disabled = true;
+  vcall3000Button.disabled = true;
+  vcall3001Button.disabled = true;
+  vcall3002Button.disabled = true;
+};
+
+// —— 通用音频外呼 ——
+const placeAudioCall = (uri: string): void => {
+  disableAllCallButtons();
+  hangupButton.disabled = true;
+  dialingOut = true;
+  activeUA = "audio";
+  void playSafe(ringbackAudio);
+  currentPeer = uri;
+  callPeerSpan.innerHTML = uri;
+  callStatusSpan.innerHTML = "正在呼叫";
+  simpleUser
+    .call(uri, { inviteWithoutSdp: false })
+    .catch((error: Error) => {
+      dialingOut = false;
+      stopAudio(ringbackAudio);
+      console.error(`[${simpleUser.id}] failed to place call to ${uri}`);
+      console.error(error);
+      alert(`Failed to place call to ${uri}.\n` + error);
+      callStatusSpan.innerHTML = "空闲";
+      callPeerSpan.innerHTML = "—";
+      currentPeer = undefined;
+      activeUA = undefined;
+    });
+};
+
 // 通话状态标志
 // dialingOut: 正在外呼但尚未建立；
 // hasActiveCall: 已建立的通话（来电或去电）。
@@ -291,6 +347,28 @@ const simpleUserDelegate: SimpleUserDelegate = {
     callStatusSpan.innerHTML = "空闲";
     callPeerSpan.innerHTML = "—";
     currentPeer = undefined;
+    // 连接断开/未注册状态下，禁用所有“音频通话”与“音频AI”相关按钮，防止误操作
+    try {
+      callButton.disabled = true;
+      call1000Button.disabled = true;
+      call1001Button.disabled = true;
+      call1002Button.disabled = true;
+      call1003Button.disabled = true;
+      call1004Button.disabled = true;
+      call1005Button.disabled = true;
+      callCustomButton.disabled = true;
+      customNumberInput.disabled = true;
+      call9200Button.disabled = true;
+      call9201Button.disabled = true;
+      call9203Button.disabled = true;
+      // 可选：IVR/会议亦为音频业务，通常也应禁用
+      call5000Button.disabled = true;
+      call3000Button.disabled = true;
+      call3001Button.disabled = true;
+      call3002Button.disabled = true;
+    } catch {
+      // no-op
+    }
   }
 };
 
@@ -317,7 +395,19 @@ const simpleUserOptions: SimpleUserOptions = {
     logLevel: "debug",
     displayName,
     authorizationUsername: AUTH_USER,
-    authorizationPassword: AUTH_PASS
+    authorizationPassword: AUTH_PASS,
+    // 优化 WebRTC 连接体验：缩短 ICE 超时并显式配置 STUN
+    // 说明：默认已有 Google STUN；这里显式设置并将 ICE 收集超时从默认 5000ms 缩短到 2000ms，
+    // 可减少外呼前等待（不影响对端 4xx/5xx 的业务结果）。
+    sessionDescriptionHandlerFactoryOptions: {
+      iceGatheringTimeout: 2000,
+      peerConnectionConfiguration: {
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun.cloudflare.com:3478" }
+        ]
+      }
+    }
   }
 };
 
@@ -438,7 +528,17 @@ const videoUserOptions: SimpleUserOptions = {
     logLevel: "debug",
     displayName,
     authorizationUsername: AUTH_USER,
-    authorizationPassword: AUTH_PASS
+    authorizationPassword: AUTH_PASS,
+    // 与音频一致，优化 ICE 收集与连通性
+    sessionDescriptionHandlerFactoryOptions: {
+      iceGatheringTimeout: 2000,
+      peerConnectionConfiguration: {
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun.cloudflare.com:3478" }
+        ]
+      }
+    }
   }
 };
 
@@ -594,252 +694,25 @@ incomingDecline.addEventListener("click", () => {
 });
 
 // Add click listener to call button
-callButton.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  call9201Button.disabled = true;
-  call9203Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = target;
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call(target, {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call`);
-      console.error(error);
-      alert("Failed to place call.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+callButton.addEventListener("click", () => placeAudioCall(target));
 
 // Add click listener to call 1000 button
-call1000Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1002Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  call9201Button.disabled = true;
-  call9203Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:1000@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:1000@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 1000`);
-      console.error(error);
-      alert("Failed to place call to 1000.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call1000Button.addEventListener("click", () => placeAudioCall("sip:1000@sip.weiyuai.cn"));
 
 // Add click listener to call 1002 button
-call1002Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1002Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:1002@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:1002@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 1002`);
-      console.error(error);
-      alert("Failed to place call to 1002.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call1002Button.addEventListener("click", () => placeAudioCall("sip:1002@sip.weiyuai.cn"));
 
 // Add click listener to call 1001 button
-call1001Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:1001@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:1001@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 1001`);
-      console.error(error);
-      alert("Failed to place call to 1001.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call1001Button.addEventListener("click", () => placeAudioCall("sip:1001@sip.weiyuai.cn"));
 
 // Add click listener to call 1003 button
-call1003Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:1003@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:1003@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 1003`);
-      console.error(error);
-      alert("Failed to place call to 1003.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call1003Button.addEventListener("click", () => placeAudioCall("sip:1003@sip.weiyuai.cn"));
 
 // Add click listener to call 1004 button
-call1004Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:1004@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:1004@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 1004`);
-      console.error(error);
-      alert("Failed to place call to 1004.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call1004Button.addEventListener("click", () => placeAudioCall("sip:1004@sip.weiyuai.cn"));
 
 // Add click listener to call 1005 button
-call1005Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:1005@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:1005@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 1005`);
-      console.error(error);
-      alert("Failed to place call to 1005.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call1005Button.addEventListener("click", () => placeAudioCall("sip:1005@sip.weiyuai.cn"));
 
 // Add click listener to call custom number button
 callCustomButton.addEventListener("click", () => {
@@ -879,93 +752,14 @@ callCustomButton.addEventListener("click", () => {
     });
 });
 
+// Add click listener to call 9201 button (Audio AI test)
+call9201Button.addEventListener("click", () => placeAudioCall("sip:9201@sip.weiyuai.cn"));
+
+// Add click listener to call 9203 button (Audio AI test)
+call9203Button.addEventListener("click", () => placeAudioCall("sip:9203@sip.weiyuai.cn"));
+
 // Add click listener to call 9200 button
-call9200Button.addEventListener("click", () => {
-
-  // Add click listener to call 9201 button (Audio AI test)
-  call9201Button.addEventListener("click", () => {
-    callButton.disabled = true;
-    call1000Button.disabled = true;
-    call1001Button.disabled = true;
-    call9200Button.disabled = true;
-    call9201Button.disabled = true;
-    call9203Button.disabled = true;
-    call5000Button.disabled = true;
-    hangupButton.disabled = true;
-    dialingOut = true;
-    void playSafe(ringbackAudio);
-    currentPeer = "sip:9201@sip.weiyuai.cn";
-    callPeerSpan.innerHTML = currentPeer;
-    callStatusSpan.innerHTML = "正在呼叫";
-    simpleUser
-      .call("sip:9201@sip.weiyuai.cn", { inviteWithoutSdp: false })
-      .catch((error: Error) => {
-        dialingOut = false;
-        stopAudio(ringbackAudio);
-        console.error(`[${simpleUser.id}] failed to place call to 9201`);
-        console.error(error);
-        alert("Failed to place call to 9201.\n" + error);
-        callStatusSpan.innerHTML = "空闲";
-        callPeerSpan.innerHTML = "—";
-        currentPeer = undefined;
-      });
-  });
-
-  // Add click listener to call 9203 button (Audio AI test)
-  call9203Button.addEventListener("click", () => {
-    callButton.disabled = true;
-    call1000Button.disabled = true;
-    call1001Button.disabled = true;
-    call9200Button.disabled = true;
-    call9201Button.disabled = true;
-    call9203Button.disabled = true;
-    call5000Button.disabled = true;
-    hangupButton.disabled = true;
-    dialingOut = true;
-    void playSafe(ringbackAudio);
-    currentPeer = "sip:9203@sip.weiyuai.cn";
-    callPeerSpan.innerHTML = currentPeer;
-    callStatusSpan.innerHTML = "正在呼叫";
-    simpleUser
-      .call("sip:9203@sip.weiyuai.cn", { inviteWithoutSdp: false })
-      .catch((error: Error) => {
-        dialingOut = false;
-        stopAudio(ringbackAudio);
-        console.error(`[${simpleUser.id}] failed to place call to 9203`);
-        console.error(error);
-        alert("Failed to place call to 9203.\n" + error);
-        callStatusSpan.innerHTML = "空闲";
-        callPeerSpan.innerHTML = "—";
-        currentPeer = undefined;
-      });
-  });
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:9200@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:9200@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 9200`);
-      console.error(error);
-      alert("Failed to place call to 9200.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call9200Button.addEventListener("click", () => placeAudioCall("sip:9200@sip.weiyuai.cn"));
 
 // Add click listener to hangup button
 hangupButton.addEventListener("click", () => {
@@ -996,7 +790,15 @@ disconnectButton.addEventListener("click", () => {
   call9200Button.disabled = true;
   hangupButton.disabled = true;
   call1000Button.disabled = true;
+  // 补充禁用其余音频按钮与音频AI按钮，避免断开后仍可点击
+  call1001Button.disabled = true;
   call1002Button.disabled = true;
+  call1003Button.disabled = true;
+  call1004Button.disabled = true;
+  call1005Button.disabled = true;
+  call9201Button.disabled = true;
+  call9203Button.disabled = true;
+  call5000Button.disabled = true;
   callCustomButton.disabled = true;
   customNumberInput.disabled = true;
   Promise.resolve()
@@ -1253,151 +1055,16 @@ vcall3002Button.addEventListener("click", () => {
 });
 
 // Add click listener to call 5000 button (IVR test)
-call5000Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:5000@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:5000@sip.weiyuai.cn", {
-      inviteWithoutSdp: false
-    })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 5000`);
-      console.error(error);
-      alert("Failed to place call to 5000.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call5000Button.addEventListener("click", () => placeAudioCall("sip:5000@sip.weiyuai.cn"));
 
 // Add click listener to call 3000 button (Conference)
-call3000Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  call3000Button.disabled = true;
-  call3001Button.disabled = true;
-  call3002Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:3000@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:3000@sip.weiyuai.cn", { inviteWithoutSdp: false })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 3000`);
-      console.error(error);
-      alert("Failed to place call to 3000.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call3000Button.addEventListener("click", () => placeAudioCall("sip:3000@sip.weiyuai.cn"));
 
 // Add click listener to call 3001 button (Conference)
-call3001Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  call3000Button.disabled = true;
-  call3001Button.disabled = true;
-  call3002Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:3001@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:3001@sip.weiyuai.cn", { inviteWithoutSdp: false })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 3001`);
-      console.error(error);
-      alert("Failed to place call to 3001.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call3001Button.addEventListener("click", () => placeAudioCall("sip:3001@sip.weiyuai.cn"));
 
 // Add click listener to call 3002 button (Conference)
-call3002Button.addEventListener("click", () => {
-  callButton.disabled = true;
-  call1000Button.disabled = true;
-  call1001Button.disabled = true;
-  call1002Button.disabled = true;
-  call1003Button.disabled = true;
-  call1004Button.disabled = true;
-  call1005Button.disabled = true;
-  callCustomButton.disabled = true;
-  customNumberInput.disabled = true;
-  call9200Button.disabled = true;
-  call5000Button.disabled = true;
-  call3000Button.disabled = true;
-  call3001Button.disabled = true;
-  call3002Button.disabled = true;
-  hangupButton.disabled = true;
-  dialingOut = true;
-  // 外呼等待音
-  void playSafe(ringbackAudio);
-  currentPeer = "sip:3002@sip.weiyuai.cn";
-  callPeerSpan.innerHTML = currentPeer;
-  callStatusSpan.innerHTML = "正在呼叫";
-  simpleUser
-    .call("sip:3002@sip.weiyuai.cn", { inviteWithoutSdp: false })
-    .catch((error: Error) => {
-      dialingOut = false;
-      stopAudio(ringbackAudio);
-      console.error(`[${simpleUser.id}] failed to place call to 3002`);
-      console.error(error);
-      alert("Failed to place call to 3002.\n" + error);
-      callStatusSpan.innerHTML = "空闲";
-      callPeerSpan.innerHTML = "—";
-      currentPeer = undefined;
-    });
-});
+call3002Button.addEventListener("click", () => placeAudioCall("sip:3002@sip.weiyuai.cn"));
 
 // Keypad helper function
 const keypadDisabled = (disabled: boolean): void => {
